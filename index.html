@@ -1,0 +1,2167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Solar System & Spacetime Curvature Laboratory</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  :root {
+    --bg-dark: #04070e;
+    --panel-bg: rgba(11, 16, 29, 0.95);
+    --panel-border: #1e2d4a;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: #00d2ff;
+    --accent-sec: #a855f7;
+    --gr-col: #f43f5e;
+    --newt-col: #10b981;
+    --warn: #f59e0b;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg-dark);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header & 10-Module Navigation */
+  header {
+    background: #080c17;
+    border-bottom: 1px solid var(--panel-border);
+    padding: 6px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 35;
+    flex-shrink: 0;
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 14.5px;
+    color: var(--accent);
+    letter-spacing: 0.3px;
+  }
+  .brand span.sub {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 11.5px;
+  }
+  .module-bar {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .module-bar::-webkit-scrollbar { height: 4px; }
+  .module-bar::-webkit-scrollbar-thumb { background: #263859; border-radius: 2px; }
+  .mod-btn {
+    background: #0b1120;
+    border: 1px solid #1c2a46;
+    color: var(--text-muted);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .mod-btn:hover { color: #fff; border-color: var(--accent); }
+  .mod-btn.active {
+    background: var(--accent);
+    color: #030711;
+    border-color: var(--accent);
+  }
+
+  .btn-sm {
+    background: #131e36;
+    border: 1px solid var(--panel-border);
+    color: var(--text-main);
+    padding: 4px 9px;
+    border-radius: 5px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.active-toggle {
+    background: rgba(0, 210, 255, 0.22);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-sm.phys-level {
+    border-color: var(--accent-sec);
+    color: #e9d5ff;
+    background: rgba(168, 85, 247, 0.18);
+  }
+
+  /* Main Full-Screen Workspace */
+  .app-body {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+  #canvas-container {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, #090f1f 0%, #03050a 100%);
+    z-index: 1;
+  }
+
+  /* Left, Right & Bottom Slide-Out Drawers */
+  .left-drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 340px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(12px);
+    border-right: 1px solid var(--panel-border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 20;
+    box-shadow: 8px 0 28px rgba(0,0,0,0.7);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .left-drawer.closed { transform: translateX(-100%); }
+
+  .right-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 355px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(12px);
+    border-left: 1px solid var(--panel-border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 20;
+    box-shadow: -8px 0 28px rgba(0,0,0,0.7);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .right-drawer.closed { transform: translateX(100%); }
+
+  .bottom-drawer {
+    position: absolute;
+    left: 340px;
+    right: 355px;
+    bottom: 0;
+    height: 195px;
+    background: rgba(9, 14, 26, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--panel-border);
+    z-index: 18;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), left 0.28s, right 0.28s;
+  }
+  .bottom-drawer.closed { transform: translateY(100%); }
+  .bottom-drawer.expand-left { left: 0; }
+  .bottom-drawer.expand-right { right: 0; }
+
+  .left-drawer::-webkit-scrollbar,
+  .right-drawer::-webkit-scrollbar { width: 5px; }
+  .left-drawer::-webkit-scrollbar-thumb,
+  .right-drawer::-webkit-scrollbar-thumb { background: #263859; border-radius: 3px; }
+
+  /* Drawer Handle Tabs */
+  .drawer-tab-left {
+    position: absolute;
+    top: 45%;
+    left: 340px;
+    transform: translateY(-50%);
+    background: #111a2e;
+    border: 1px solid var(--accent);
+    border-left: none;
+    color: var(--accent);
+    padding: 12px 6px;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    z-index: 25;
+    writing-mode: vertical-rl;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    transition: left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    user-select: none;
+  }
+  .drawer-tab-left.closed { left: 0; }
+
+  .drawer-tab-right {
+    position: absolute;
+    top: 45%;
+    right: 355px;
+    transform: translateY(-50%);
+    background: #111a2e;
+    border: 1px solid var(--accent);
+    border-right: none;
+    color: var(--accent);
+    padding: 12px 6px;
+    border-radius: 8px 0 0 8px;
+    cursor: pointer;
+    z-index: 25;
+    writing-mode: vertical-rl;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    transition: right 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    user-select: none;
+  }
+  .drawer-tab-right.closed { right: 0; }
+
+  .drawer-tab-bottom {
+    position: absolute;
+    bottom: 195px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111a2e;
+    border: 1px solid var(--accent);
+    border-bottom: none;
+    color: var(--accent);
+    padding: 4px 16px;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    z-index: 25;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    transition: bottom 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    user-select: none;
+  }
+  .drawer-tab-bottom.closed { bottom: 0; }
+
+  .panel-sec {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .sec-title {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Sliders & Controls */
+  .slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 8px;
+  }
+  .slider-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    align-items: center;
+  }
+  .slider-head span.val {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    height: 5px;
+    cursor: pointer;
+  }
+  select, input[type="number"] {
+    background: #060a12;
+    border: 1px solid #263859;
+    color: #fff;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    width: 100%;
+    outline: none;
+  }
+  .chk-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .chk-lbl {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    cursor: pointer;
+    color: #dbe4f0;
+  }
+
+  /* Celestial Object Grid & Info Cards */
+  .planet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  .planet-btn {
+    background: #0d1526;
+    border: 1px solid #223252;
+    color: #cbd5e1;
+    padding: 5px 6px;
+    border-radius: 5px;
+    font-size: 11px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.12s;
+  }
+  .planet-btn:hover, .planet-btn.selected {
+    border-color: var(--accent);
+    background: rgba(0, 210, 255, 0.18);
+    color: #fff;
+    font-weight: 600;
+  }
+  .info-card {
+    background: #070b14;
+    border: 1px solid #223252;
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-size: 11.5px;
+    line-height: 1.48;
+    margin-bottom: 8px;
+  }
+  .info-card h4 {
+    color: var(--accent);
+    font-size: 12.5px;
+    margin-bottom: 4px;
+  }
+  .formula-box {
+    background: #0c1324;
+    border-left: 3px solid var(--accent);
+    padding: 6px 9px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #a5f3fc;
+    margin: 5px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .warn-banner {
+    background: rgba(245, 158, 11, 0.14);
+    border: 1px solid var(--warn);
+    color: #fde68a;
+    padding: 6px 9px;
+    border-radius: 5px;
+    font-size: 11px;
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .data-table td {
+    padding: 3px 5px;
+    border-bottom: 1px solid #162038;
+  }
+  .data-table td.val {
+    text-align: right;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Top Floating Camera & Scale Banner */
+  .top-floating-bar {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 5px;
+    background: rgba(11, 16, 29, 0.92);
+    backdrop-filter: blur(8px);
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    z-index: 15;
+    align-items: center;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  }
+  .scale-alert-pill {
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(245, 158, 11, 0.16);
+    border: 1px solid rgba(245, 158, 11, 0.6);
+    color: #fde68a;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    z-index: 14;
+    pointer-events: none;
+  }
+
+  /* Bottom Panel Content */
+  .bottom-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 270px 1fr 270px;
+    gap: 10px;
+    padding: 8px 12px;
+    overflow: hidden;
+  }
+  .telemetry-box {
+    background: #060a12;
+    border: 1px solid #1c2b47;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .tel-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed #152036;
+    padding: 2px 0;
+  }
+  .tel-row span.v { color: var(--accent); font-weight: 600; }
+  #live-graph-canvas {
+    width: 100%;
+    height: 100%;
+    background: #04070d;
+    border: 1px solid #1c2b47;
+    border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="brand">
+      <span>3D SOLAR SYSTEM &amp; SPACETIME CURVATURE LAB</span>
+      <span class="sub">Celestial Mechanics, Kepler Orbits, Schwarzschild Geodesics &amp; General Relativity</span>
+    </div>
+    <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+      <button class="btn-sm phys-level" id="btn-phys-level" onclick="togglePhysicsDepthMode()">Level: Higher Physics Mode (Equations &amp; SI)</button>
+      <button class="btn-sm" id="btn-unit-sys" onclick="toggleUnitSystem()">Units: SI (m, kg, s)</button>
+      <button class="btn-sm active-toggle" id="btn-left-drawer" onclick="toggleLeftDrawer()">◧ Objects &amp; Layers</button>
+      <button class="btn-sm active-toggle" id="btn-right-drawer" onclick="toggleRightDrawer()">◨ Physics &amp; Math</button>
+      <button class="btn-sm active-toggle" id="btn-bottom-drawer" onclick="toggleBottomDrawer()">◫ Graphs &amp; Time</button>
+      <button class="btn-sm" id="btn-clean-view" onclick="toggleCleanSpaceView()">👁 Clean 3D Space</button>
+    </div>
+  </div>
+
+  <!-- 10 Core Modules Navigation Bar -->
+  <div class="module-bar">
+    <button class="mod-btn active" id="mod-solar" onclick="selectModule('solar')">1. Solar System Explorer</button>
+    <button class="mod-btn" id="mod-newton" onclick="selectModule('newton')">2. Newtonian Gravity &amp; Field Lab</button>
+    <button class="mod-btn" id="mod-orbital" onclick="selectModule('orbital')">3. Orbital Mechanics &amp; Kepler Lab</button>
+    <button class="mod-btn" id="mod-spacetime" onclick="selectModule('spacetime')">4. Spacetime Curvature Explorer</button>
+    <button class="mod-btn" id="mod-gr" onclick="selectModule('gr')">5. General Relativity &amp; Geodesics</button>
+    <button class="mod-btn" id="mod-blackhole" onclick="selectModule('blackhole')">6. Black Hole Laboratory</button>
+    <button class="mod-btn" id="mod-lensing" onclick="selectModule('lensing')">7. Gravitational Lensing Lab</button>
+    <button class="mod-btn" id="mod-timedilation" onclick="selectModule('timedilation')">8. Gravitational Time Dilation</button>
+    <button class="mod-btn" id="mod-compare" onclick="selectModule('compare')">9. Newtonian vs General Relativity</button>
+    <button class="mod-btn" id="mod-experiments" onclick="selectModule('experiments')">10. N-Body Sandbox, Course &amp; Quiz</button>
+  </div>
+</header>
+
+<div class="app-body">
+  <!-- LEFT DRAWER: OBJECT SELECTION, VISUALIZATION SCALING & LAYERS -->
+  <aside class="left-drawer" id="left-drawer">
+    <div id="dynamic-left-panel"></div>
+
+    <!-- Universal Visualization Layers & Scale Controls -->
+    <div class="panel-sec" style="border-bottom:none;">
+      <div class="sec-title"><span>Visualization Layers &amp; Scaling</span></div>
+      <div class="chk-grid">
+        <label class="chk-lbl"><input type="checkbox" id="chk-orbits" checked onchange="syncLayers()"> Orbital Paths</label>
+        <label class="chk-lbl"><input type="checkbox" id="chk-trails" checked onchange="syncLayers()"> Dynamic Trails</label>
+        <label class="chk-lbl"><input type="checkbox" id="chk-vel-vec" checked onchange="syncLayers()"> Velocity Vec (v)</label>
+        <label class="chk-lbl"><input type="checkbox" id="chk-acc-vec" checked onchange="syncLayers()"> Gravity/Acc Vec (g)</label>
+        <label class="chk-lbl"><input type="checkbox" id="chk-labels" checked onchange="syncLayers()"> 3D Body Labels</label>
+        <label class="chk-lbl"><input type="checkbox" id="chk-asteroids" checked onchange="syncLayers()"> Asteroid Belt</label>
+        <label class="chk-lbl"><input type="checkbox" id="chk-dwarfs" checked onchange="syncLayers()"> Pluto &amp; Comets</label>
+        <label class="chk-lbl"><input type="checkbox" id="chk-axes" onchange="syncLayers()"> Ecliptic Axes</label>
+      </div>
+    </div>
+  </aside>
+
+  <div class="drawer-tab-left" id="tab-left" onclick="toggleLeftDrawer()">◀ OBJECTS</div>
+
+  <!-- CENTER 3D SPACE VIEWPORT -->
+  <main id="canvas-container"></main>
+
+  <!-- TOP FLOATING CAMERA & PLAYBACK BAR -->
+  <div class="top-floating-bar">
+    <button class="btn-sm active-toggle" id="btn-play" onclick="togglePlay()">⏸ Pause</button>
+    <button class="btn-sm" onclick="stepSimulation(-1)">◀ −Δt</button>
+    <button class="btn-sm" onclick="stepSimulation(1)">+Δt ▶</button>
+    <span style="color:#334155;">|</span>
+    <button class="btn-sm" onclick="setCameraPreset('overview')">Solar Overview</button>
+    <button class="btn-sm" onclick="setCameraPreset('ecliptic_top')">Above Ecliptic</button>
+    <button class="btn-sm" onclick="setCameraPreset('edge_on')">Edge-On Plane</button>
+    <button class="btn-sm" onclick="setCameraPreset('follow')">Follow Selected</button>
+    <button class="btn-sm" onclick="exportGraphCSV()">⬇ Export CSV</button>
+  </div>
+
+  <!-- SCALE DISCLOSURE BANNER -->
+  <div class="scale-alert-pill" id="scale-alert-pill">
+    ⚠️ Educational View Active: Planet radii exaggerated &amp; distances compressed (√AU scale) for visibility.
+  </div>
+
+  <div class="drawer-tab-right" id="tab-right" onclick="toggleRightDrawer()">PHYSICS &amp; MATH ▶</div>
+
+  <!-- RIGHT DRAWER: PARAMETERS, EQUATIONS, MODEL ASSUMPTIONS & TELEMETRY -->
+  <aside class="right-drawer" id="right-drawer">
+    <div id="dynamic-right-panel"></div>
+  </aside>
+
+  <div class="drawer-tab-bottom" id="tab-bottom" onclick="toggleBottomDrawer()">▼ TIMELINE &amp; LIVE GRAPHS</div>
+
+  <!-- BOTTOM DRAWER: TIMELINE, GRAPH & MODEL VALIDATION -->
+  <section class="bottom-drawer" id="bottom-drawer">
+    <div class="bottom-content">
+      <div class="telemetry-box" id="bottom-left-telemetry"></div>
+      <canvas id="live-graph-canvas"></canvas>
+      <div class="telemetry-box" id="bottom-right-model-info"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ============================================================================
+   1. ASTRONOMICAL CONSTANTS & SCIENTIFIC CELESTIAL BODY DATASET (NASA / IAU)
+   ============================================================================ */
+const CONST = {
+  G: 6.67430e-11,          // m³ kg⁻¹ s⁻²
+  c: 299792458,            // m/s
+  AU: 1.495978707e11,      // m
+  M_sun: 1.98847e30,       // kg
+  M_earth: 5.9722e24,      // kg
+  R_sun_km: 696340,
+  DAY_SEC: 86400
+};
+
+const SOLAR_BODIES = [
+  { id: 'sun', name: 'Sun', type: 'Star', massKg: 1.9885e30, radiusKm: 696340, a_AU: 0, e: 0, incDeg: 0, periodDays: 0, v_kms: 0, gm: '1.327×10²⁰', color: 0xffb703, desc: 'G2V main-sequence star containing 99.86% of the Solar System mass.' },
+  { id: 'mercury', name: 'Mercury', type: 'Terrestrial Planet', massKg: 3.3011e23, radiusKm: 2439.7, a_AU: 0.3871, e: 0.2056, incDeg: 7.0, periodDays: 87.97, v_kms: 47.36, gm: '2.203×10¹³', color: 0x94a3b8, desc: 'Innermost planet with high eccentricity (e = 0.2056) and 43″/century GR perihelion precession.' },
+  { id: 'venus', name: 'Venus', type: 'Terrestrial Planet', massKg: 4.8675e24, radiusKm: 6051.8, a_AU: 0.7233, e: 0.0068, incDeg: 3.39, periodDays: 224.70, v_kms: 35.02, gm: '3.249×10¹⁴', color: 0xfde047, desc: 'Nearly circular orbit (e = 0.0068) with dense CO₂ atmosphere.' },
+  { id: 'earth', name: 'Earth', type: 'Terrestrial Planet', massKg: 5.9722e24, radiusKm: 6371.0, a_AU: 1.0000, e: 0.0167, incDeg: 0.0, periodDays: 365.256, v_kms: 29.78, gm: '3.986×10¹⁴', color: 0x38bdf8, desc: 'Reference ecliptic plane (1.000 AU); orbited by the Moon.' },
+  { id: 'moon', name: 'Moon (Luna)', type: 'Natural Satellite', massKg: 7.342e22, radiusKm: 1737.4, a_AU: 0.00257, e: 0.0549, incDeg: 5.14, periodDays: 27.32, v_kms: 1.022, gm: '4.905×10¹²', color: 0xcbd5e1, parent: 'earth', desc: 'Tidally locked natural satellite of Earth at 384,400 km.' },
+  { id: 'mars', name: 'Mars', type: 'Terrestrial Planet', massKg: 6.4171e23, radiusKm: 3389.5, a_AU: 1.5237, e: 0.0934, incDeg: 1.85, periodDays: 686.98, v_kms: 24.07, gm: '4.283×10¹³', color: 0xf97316, desc: 'Fourth planet from the Sun; elliptical orbit studied by Kepler.' },
+  { id: 'jupiter', name: 'Jupiter', type: 'Gas Giant', massKg: 1.8982e27, radiusKm: 69911, a_AU: 5.2038, e: 0.0489, incDeg: 1.30, periodDays: 4332.59, v_kms: 13.07, gm: '1.267×10¹⁷', color: 0xfdba74, desc: 'Largest planet (318 Earth masses), dominating planetary perturbations.' },
+  { id: 'saturn', name: 'Saturn', type: 'Gas Giant (Ringed)', massKg: 5.6834e26, radiusKm: 58232, a_AU: 9.537, e: 0.0565, incDeg: 2.49, periodDays: 10759.2, v_kms: 9.68, gm: '3.793×10¹⁶', color: 0xfde68a, hasRings: true, desc: 'Gas giant with prominent icy ring system.' },
+  { id: 'uranus', name: 'Uranus', type: 'Ice Giant', massKg: 8.6810e25, radiusKm: 25362, a_AU: 19.191, e: 0.0472, incDeg: 0.77, periodDays: 30688.5, v_kms: 6.80, gm: '5.794×10¹⁵', color: 0x67e8f9, desc: 'Ice giant with 97.8° axial tilt.' },
+  { id: 'neptune', name: 'Neptune', type: 'Ice Giant', massKg: 1.0241e26, radiusKm: 24622, a_AU: 30.07, e: 0.0086, incDeg: 1.77, periodDays: 60182, v_kms: 5.43, gm: '6.837×10¹⁵', color: 0x3b82f6, desc: 'Outermost major planet at 30.07 AU.' },
+  { id: 'pluto', name: 'Pluto (Dwarf)', type: 'Kuiper Belt Dwarf Planet', massKg: 1.303e22, radiusKm: 1188.3, a_AU: 39.48, e: 0.2488, incDeg: 17.16, periodDays: 90560, v_kms: 4.67, gm: '8.71×10¹¹', color: 0xd8b4fe, isDwarf: true, desc: 'High-inclination (17.16°), high-eccentricity (0.249) resonant Kuiper Belt object.' },
+  { id: 'halley', name: "Halley's Comet", type: 'Periodic Comet', massKg: 2.2e14, radiusKm: 11, a_AU: 17.834, e: 0.9671, incDeg: 18.0, periodDays: 27510, v_kms: 54.6, gm: '1.5×10⁴', color: 0xa5f3fc, isDwarf: true, desc: 'Highly eccentric comet (e = 0.967) demonstrating extreme Keplerian speed changes between perihelion and aphelion.' },
+  { id: 'voyager', name: 'Deep-Space Probe', type: 'Spacecraft Trajectory', massKg: 825, radiusKm: 2, a_AU: 3.5, e: 0.72, incDeg: 4.0, periodDays: 2380, v_kms: 38.2, gm: '5.5×10⁻⁸', color: 0x10b981, isDwarf: true, desc: 'Hohmann/transfer spacecraft trajectory through the Solar System.' }
+];
+
+/* ============================================================================
+   2. GLOBAL STATE FOR ALL 10 MODULES
+   ============================================================================ */
+const state = {
+  module: 'solar',           // 'solar'|'newton'|'orbital'|'spacetime'|'gr'|'blackhole'|'lensing'|'timedilation'|'compare'|'experiments'
+  higherPhysicsMode: true,   // True = Full equations, assumptions & quantitative telemetry; False = Intuitive mode
+  geometrizedUnits: false,   // False = SI units; True = Geometrized (G = c = 1, lengths in GM/c²)
+  running: true,
+  simDaysPerSec: 45,         // Simulation speed for Solar System
+  simTimeDays: 0,
+  followBody: false,
+
+  // Module 1: Solar System Explorer
+  selectedBodyId: 'earth',
+  scaleViewMode: 'educational', // 'educational' | 'scale_aware'
+  planetSizeExag: 1.0,
+  distCompressPower: 0.58,      // r_vis = (a_AU ^ distCompressPower) * 14
+
+  // Module 2: Newtonian Gravity & Field Lab
+  newtBody1MassSolar: 1.0,
+  newtBody2MassEarth: 1.0,
+  newtSeparationAU: 1.0,
+  fieldConfig: 'single',        // 'single' | 'binary' | 'sun_planet'
+  showPotentialSurface: false,
+
+  // Module 3: Orbital Mechanics & Kepler Lab
+  orbCentralMassSolar: 1.0,
+  orbR0_AU: 1.5,
+  orbVr_kms: 0.0,
+  orbVt_kms: 24.2,              // Circular speed at 1.5 AU is ~24.3 km/s
+  keplerSweepActive: true,
+  orbParticle: { x: 1.5, z: 0, vx: 0, vz: 24.2, trail: [], sectors: [], sweepTimer: 0 },
+
+  // Module 4: Spacetime Curvature Explorer
+  stMode: 'flamm',              // 'flat' | 'spatial3d' | 'flamm' | 'rubber_sheet'
+  stMassSolar: 10.0,
+  stProbeR_rs: 3.5,
+
+  // Module 5: General Relativity & Schwarzschild Geodesics
+  grMassSolar: 15.0,
+  grParticleType: 'timelike',   // 'timelike' (massive particle) | 'null' (light photon)
+  grR0_rs: 6.5,                 // Initial radius in units of r_s
+  grVphiFactor: 1.05,           // Angular momentum factor relative to circular
+  grGeodesic: { r: 6.5, phi: 0, dr_dtau: 0, E: 1, h: 2.2, tau: 0, t_coord: 0, trail: [] },
+
+  // Module 6: Black Hole Laboratory
+  bhMassSolar: 20.0,
+  bhShowAccretion: true,
+  bhObserverR_rs: 4.5,
+
+  // Module 7: Gravitational Lensing Lab
+  lensMassSolar: 50.0,
+  lensImpactB_rs: 4.0,
+  lensSourceOffset: 0.6,        // 0.0 gives exact Einstein Ring alignment!
+  lensShowFlatRay: true,
+
+  // Module 8: Gravitational Time Dilation
+  tdMassSolar: 10.0,
+  tdClockAR_rs: 1.35,           // Close to horizon (r = 1.35 r_s)
+  tdClockBR_rs: 12.0,           // Far observer
+  tdVelocityBeta: 0.65,         // v/c for Special Relativity comparison
+  tdCompareMode: 'gr_only',     // 'gr_only' | 'sr_vs_gr' | 'combined'
+  tdCoordTime: 0,
+
+  // Module 9: Newtonian vs General Relativity Comparison
+  compTestCase: 'precession',   // 'precession' | 'light_bend' | 'clock_potential'
+  compEccentricity: 0.45,
+  compSemiMajor_rs: 8.0,
+  compPrecessionBoost: 1.0,     // 1.0 = exact strong-field Schwarzschild at r = 8 r_s
+
+  // Module 10: N-Body Sandbox, Guided Lessons & Quiz
+  expSubTab: 'nbody',           // 'nbody' | 'guided' | 'quiz'
+  nBodies: [],
+  guidedIdx: 0,
+  quizIdx: 0,
+  quizScore: 0,
+
+  // Live Graph History
+  graphHistory: []
+};
+
+/* ============================================================================
+   3. THREE.JS 3D ENGINE INITIALIZATION & SCENE GROUPS
+   ============================================================================ */
+let scene, camera, renderer, controls, raycaster, mouse;
+let solarGroup, newtonGroup, orbitalGroup, spacetimeGroup, grGroup, bhGroup, lensingGroup, tdGroup, compareGroup, nbodyGroup;
+let planetMeshMap = {};
+let clickableObjects = [];
+
+function makeTextSprite(text, colorStr = '#f8fafc', scale = 1.0) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 340;
+  canvas.height = 96;
+  const ctx = canvas.getContext('2d');
+  ctx.font = 'bold 34px Inter, Consolas, sans-serif';
+  ctx.strokeStyle = 'rgba(4, 7, 14, 0.92)';
+  ctx.lineWidth = 7;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.strokeText(text, 170, 48);
+  ctx.fillStyle = colorStr;
+  ctx.fillText(text, 170, 48);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false });
+  const sp = new THREE.Sprite(mat);
+  sp.scale.set(2.8 * scale, 0.8 * scale, 1);
+  sp.renderOrder = 25;
+  return sp;
+}
+
+function initThreeJS() {
+  const container = document.getElementById('canvas-container');
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 2000);
+  camera.position.set(0, 28, 45);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const sunLight = new THREE.PointLight(0xfffbeb, 1.4, 800);
+  scene.add(sunLight);
+  const dirLight = new THREE.DirectionalLight(0x90caf9, 0.45);
+  dirLight.position.set(25, 40, 30);
+  scene.add(dirLight);
+
+  // Subtle scientifically restrained background starfield
+  const starVerts = [];
+  for (let i = 0; i < 1200; i++) {
+    const r = 350 + Math.random() * 300;
+    const theta = Math.acos(2 * Math.random() - 1);
+    const phi = 2 * Math.PI * Math.random();
+    starVerts.push(r * Math.sin(theta) * Math.cos(phi), r * Math.cos(theta), r * Math.sin(theta) * Math.sin(phi));
+  }
+  const starGeo = new THREE.BufferGeometry();
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts, 3));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x64748b, size: 1.1 })));
+
+  solarGroup = new THREE.Group();
+  newtonGroup = new THREE.Group();
+  orbitalGroup = new THREE.Group();
+  spacetimeGroup = new THREE.Group();
+  grGroup = new THREE.Group();
+  bhGroup = new THREE.Group();
+  lensingGroup = new THREE.Group();
+  tdGroup = new THREE.Group();
+  compareGroup = new THREE.Group();
+  nbodyGroup = new THREE.Group();
+
+  scene.add(solarGroup, newtonGroup, orbitalGroup, spacetimeGroup, grGroup, bhGroup, lensingGroup, tdGroup, compareGroup, nbodyGroup);
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+  renderer.domElement.addEventListener('pointerdown', onCanvasClick);
+  window.addEventListener('resize', onWindowResize);
+
+  initSolarSystem3D();
+  resetOrbitalLaunch(true);
+  resetGRGeodesic();
+  initDefaultNBody();
+}
+
+function clearGroup(grp) {
+  while (grp.children.length > 0) {
+    const c = grp.children[0];
+    grp.remove(c);
+    if (c.geometry) c.geometry.dispose();
+  }
+}
+
+/* ============================================================================
+   4. MODULE 1: 3D SOLAR SYSTEM ENGINE (KEPLER EQUATION SOLVER & SCALE MODES)
+   ============================================================================ */
+function mapAUtoScene(a_AU) {
+  if (a_AU <= 0) return 0;
+  if (state.scaleViewMode === 'scale_aware') {
+    return a_AU * 8.0; // Strictly linear distance scaling (1 AU = 8 scene units)
+  }
+  return Math.pow(a_AU, state.distCompressPower) * 13.5;
+}
+
+function mapRadiusToScene(body) {
+  if (state.scaleViewMode === 'scale_aware') {
+    // True relative planetary size ratio (with minimum 0.08 so terrestrial planets remain clickable)
+    if (body.id === 'sun') return 1.8;
+    return Math.max(0.09, (body.radiusKm / 69911) * 0.75) * state.planetSizeExag;
+  }
+  if (body.id === 'sun') return 2.2;
+  const base = Math.pow(body.radiusKm / 6371, 0.35) * 0.52;
+  return Math.max(0.18, Math.min(1.35, base)) * state.planetSizeExag;
+}
+
+// Solve Kepler's Equation M = E - e sin(E) via Newton-Raphson
+function solveKeplerPosition(body, tDays) {
+  if (body.id === 'sun') return { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r_AU: 0, speed_kms: 0 };
+
+  if (body.parent === 'earth') {
+    const earthPos = solveKeplerPosition(SOLAR_BODIES.find(b => b.id === 'earth'), tDays);
+    const angle = (2 * Math.PI * tDays) / body.periodDays;
+    const moonDist = state.scaleViewMode === 'scale_aware' ? 0.55 : 1.45;
+    return {
+      x: earthPos.x + moonDist * Math.cos(angle),
+      y: earthPos.y + moonDist * Math.sin(angle) * Math.sin((body.incDeg * Math.PI) / 180),
+      z: earthPos.z + moonDist * Math.sin(angle),
+      vx: -Math.sin(angle), vy: 0, vz: Math.cos(angle),
+      r_AU: body.a_AU, speed_kms: body.v_kms
+    };
+  }
+
+  const M = ((2 * Math.PI * tDays) / body.periodDays) % (2 * Math.PI);
+  let E = M;
+  for (let i = 0; i < 6; i++) {
+    E = E - (E - body.e * Math.sin(E) - M) / (1 - body.e * Math.cos(E));
+  }
+  const cosE = Math.cos(E), sinE = Math.sin(E);
+  const r_AU = body.a_AU * (1 - body.e * cosE);
+  const trueAnomaly = Math.atan2(Math.sqrt(1 - body.e * body.e) * sinE, cosE - body.e);
+
+  const rScene = mapAUtoScene(r_AU);
+  const incRad = (body.incDeg * Math.PI) / 180;
+
+  const x = rScene * Math.cos(trueAnomaly);
+  const z = rScene * Math.sin(trueAnomaly) * Math.cos(incRad);
+  const y = rScene * Math.sin(trueAnomaly) * Math.sin(incRad);
+
+  // Vis-viva instantaneous orbital speed: v = sqrt(GM(2/r - 1/a))
+  const v_kms = 29.78 * Math.sqrt(Math.max(0.01, 2 / r_AU - 1 / body.a_AU));
+  const vx = -Math.sin(trueAnomaly);
+  const vz = Math.cos(trueAnomaly) * Math.cos(incRad);
+  const vy = Math.cos(trueAnomaly) * Math.sin(incRad);
+
+  return { x, y, z, vx, vy, vz, r_AU, speed_kms: v_kms };
+}
+
+function initSolarSystem3D() {
+  clearGroup(solarGroup);
+  planetMeshMap = {};
+  clickableObjects = [];
+
+  SOLAR_BODIES.forEach(body => {
+    const rad = mapRadiusToScene(body);
+    const mat = body.id === 'sun'
+      ? new THREE.MeshBasicMaterial({ color: body.color })
+      : new THREE.MeshPhongMaterial({ color: body.color, shininess: 35 });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(rad, 28, 24), mat);
+    mesh.userData = { bodyId: body.id };
+    solarGroup.add(mesh);
+    clickableObjects.push(mesh);
+
+    if (body.hasRings) {
+      const ringGeo = new THREE.RingGeometry(rad * 1.35, rad * 2.2, 48);
+      ringGeo.rotateX(Math.PI / 2.2);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xfde68a, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
+      mesh.add(new THREE.Mesh(ringGeo, ringMat));
+    }
+
+    const lbl = makeTextSprite(body.name, '#' + body.color.toString(16).padStart(6, '0'), 0.85);
+    solarGroup.add(lbl);
+
+    // Full Keplerian Orbit Curve
+    let orbitLine = null;
+    if (body.a_AU > 0 && !body.parent) {
+      const pts = [];
+      const steps = 120;
+      for (let i = 0; i <= steps; i++) {
+        const p = solveKeplerPosition(body, (body.periodDays * i) / steps);
+        pts.push(new THREE.Vector3(p.x, p.y, p.z));
+      }
+      orbitLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: body.color, transparent: true, opacity: body.isDwarf ? 0.35 : 0.55 })
+      );
+      solarGroup.add(orbitLine);
+    }
+
+    const vArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 2.2, 0x10b981, 0.4, 0.22);
+    const aArrow = new THREE.ArrowHelper(new THREE.Vector3(-1, 0, 0), new THREE.Vector3(), 1.8, 0xf43f5e, 0.4, 0.22);
+    solarGroup.add(vArrow, aArrow);
+
+    planetMeshMap[body.id] = { body, mesh, lbl, orbitLine, vArrow, aArrow };
+  });
+
+  // Asteroid Belt between Mars (2.1 AU) and Jupiter (3.3 AU)
+  const astVerts = [];
+  for (let i = 0; i < 900; i++) {
+    const a = 2.15 + Math.random() * 1.1;
+    const r = mapAUtoScene(a);
+    const ang = Math.random() * 2 * Math.PI;
+    const y = (Math.random() - 0.5) * 0.6;
+    astVerts.push(r * Math.cos(ang), y, r * Math.sin(ang));
+  }
+  const astGeo = new THREE.BufferGeometry();
+  astGeo.setAttribute('position', new THREE.Float32BufferAttribute(astVerts, 3));
+  const astCloud = new THREE.Points(astGeo, new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.16 }));
+  astCloud.name = 'asteroidBelt';
+  solarGroup.add(astCloud);
+}
+
+function updateSolarSystemFrame(dt) {
+  if (state.running) {
+    state.simTimeDays += state.simDaysPerSec * dt;
+  }
+
+  const showOrbits = document.getElementById('chk-orbits').checked;
+  const showVel = document.getElementById('chk-vel-vec').checked;
+  const showAcc = document.getElementById('chk-acc-vec').checked;
+  const showLabels = document.getElementById('chk-labels').checked;
+  const showDwarfs = document.getElementById('chk-dwarfs').checked;
+  const showAst = document.getElementById('chk-asteroids').checked;
+
+  const astObj = solarGroup.getObjectByName('asteroidBelt');
+  if (astObj) astObj.visible = showAst;
+
+  SOLAR_BODIES.forEach(body => {
+    const item = planetMeshMap[body.id];
+    if (!item) return;
+
+    const visibleBody = !body.isDwarf || showDwarfs;
+    item.mesh.visible = visibleBody;
+    item.lbl.visible = visibleBody && showLabels;
+    if (item.orbitLine) item.orbitLine.visible = visibleBody && showOrbits;
+
+    const pos = solveKeplerPosition(body, state.simTimeDays);
+    item.mesh.position.set(pos.x, pos.y, pos.z);
+    item.lbl.position.set(pos.x, pos.y + mapRadiusToScene(body) + 0.8, pos.z);
+    item.currentState = pos;
+
+    if (body.id === 'sun' || !visibleBody) {
+      item.vArrow.visible = false;
+      item.aArrow.visible = false;
+    } else {
+      item.vArrow.visible = showVel;
+      item.aArrow.visible = showAcc;
+      item.vArrow.position.set(pos.x, pos.y, pos.z);
+      item.vArrow.setDirection(new THREE.Vector3(pos.vx, pos.vy, pos.vz).normalize());
+      item.aArrow.position.set(pos.x, pos.y, pos.z);
+      item.aArrow.setDirection(new THREE.Vector3(-pos.x, -pos.y, -pos.z).normalize());
+    }
+  });
+
+  if (state.followBody && planetMeshMap[state.selectedBodyId]) {
+    const p = planetMeshMap[state.selectedBodyId].mesh.position;
+    controls.target.copy(p);
+  }
+}
+
+/* ============================================================================
+   5. MODULE 2: NEWTONIAN GRAVITY & 3D VECTOR FIELD LAB
+   ============================================================================ */
+function rebuildNewtonianLab() {
+  clearGroup(newtonGroup);
+
+  const rScene = state.newtSeparationAU * 8.0;
+  const p1 = new THREE.Vector3(-rScene / 2, 0, 0);
+  const p2 = new THREE.Vector3(rScene / 2, 0, 0);
+
+  // Body 1 (Sun/Star 1) & Body 2 (Planet/Star 2)
+  const m1Mesh = new THREE.Mesh(new THREE.SphereGeometry(1.1, 28, 24), new THREE.MeshPhongMaterial({ color: 0xffb703 }));
+  m1Mesh.position.copy(p1);
+  const m2Mesh = new THREE.Mesh(new THREE.SphereGeometry(0.65, 24, 20), new THREE.MeshPhongMaterial({ color: 0x38bdf8 }));
+  m2Mesh.position.copy(p2);
+  newtonGroup.add(m1Mesh, m2Mesh);
+
+  // Line joining centers & equal-and-opposite force vectors F12 = -F21
+  const joinGeo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+  newtonGroup.add(new THREE.Line(joinGeo, new THREE.LineDashedMaterial({ color: 0x94a3b8, dashSize: 0.4, gapSize: 0.2 })));
+
+  const fScale = Math.min(3.5, Math.max(0.8, (state.newtBody1MassSolar * state.newtBody2MassEarth) / (state.newtSeparationAU * state.newtSeparationAU) * 1.4));
+  newtonGroup.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), p1, fScale, 0x10b981, 0.45, 0.25));
+  newtonGroup.add(new THREE.ArrowHelper(new THREE.Vector3(-1, 0, 0), p2, fScale, 0x10b981, 0.45, 0.25));
+
+  const lbl1 = makeTextSprite('F₁₂ (+)', '#10b981', 0.85);
+  lbl1.position.set(p1.x + fScale / 2, 1.3, 0);
+  const lbl2 = makeTextSprite('F₂₁ = −F₁₂', '#10b981', 0.85);
+  lbl2.position.set(p2.x - fScale / 2, 1.3, 0);
+  newtonGroup.add(lbl1, lbl2);
+
+  // 3D Gravitational Field Vector Grid g(r) = sum (-G M_i (r - r_i)/|r - r_i|^3)
+  const m2Ratio = state.fieldConfig === 'binary' ? state.newtBody1MassSolar : (state.fieldConfig === 'single' ? 0 : state.newtBody2MassEarth * 0.25);
+  for (let x = -12; x <= 12; x += 3) {
+    for (let z = -12; z <= 12; z += 3) {
+      const pt = new THREE.Vector3(x, 0, z);
+      const d1 = pt.distanceTo(p1), d2 = pt.distanceTo(p2);
+      if (d1 < 1.8 || (m2Ratio > 0 && d2 < 1.5)) continue;
+
+      const gVec = p1.clone().sub(pt).multiplyScalar(state.newtBody1MassSolar / Math.pow(d1, 3));
+      if (m2Ratio > 0) {
+        gVec.add(p2.clone().sub(pt).multiplyScalar(m2Ratio / Math.pow(d2, 3)));
+      }
+      const gMag = gVec.length();
+      const col = new THREE.Color().setHSL(Math.max(0, 0.58 - gMag * 4), 0.9, 0.55);
+      newtonGroup.add(new THREE.ArrowHelper(gVec.normalize(), pt, Math.min(1.6, 0.5 + gMag * 8), col.getHex(), 0.28, 0.16));
+    }
+  }
+
+  // Optional Gravitational Potential Well Φ(x,z) = -GM₁/r₁ - GM₂/r₂
+  if (state.showPotentialSurface) {
+    const N = 50, L = 14;
+    const verts = [], inds = [];
+    for (let i = 0; i <= N; i++) {
+      const x = -L + (2 * L * i) / N;
+      for (let j = 0; j <= N; j++) {
+        const z = -L + (2 * L * j) / N;
+        const r1 = Math.max(1.2, Math.hypot(x - p1.x, z - p1.z));
+        const r2 = Math.max(1.2, Math.hypot(x - p2.x, z - p2.z));
+        const phi = -3.5 * (state.newtBody1MassSolar / r1 + (m2Ratio > 0 ? m2Ratio / r2 : 0));
+        verts.push(x, phi - 1.2, z);
+      }
+    }
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        const a = i * (N + 1) + j, b = (i + 1) * (N + 1) + j, c = (i + 1) * (N + 1) + (j + 1), d = i * (N + 1) + (j + 1);
+        inds.push(a, b, d, b, c, d);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setIndex(inds);
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    newtonGroup.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true, transparent: true, opacity: 0.3 })));
+  }
+}
+
+/* ============================================================================
+   6. MODULE 3: ORBITAL MECHANICS & KEPLER EQUAL-AREA SWEPING LAB
+   ============================================================================ */
+function resetOrbitalLaunch(keepParams = false) {
+  if (!keepParams) {
+    state.orbR0_AU = 1.5;
+    state.orbVr_kms = 0;
+    state.orbVt_kms = 24.28;
+  }
+  state.orbParticle = {
+    x: state.orbR0_AU,
+    z: 0,
+    vx: state.orbVr_kms / 29.78, // Normalized to Earth orbital speed (1 AU, GM_sun = 1)
+    vz: state.orbVt_kms / 29.78,
+    trail: [],
+    sectors: [],
+    currentSector: [],
+    sweepTimer: 0
+  };
+  state.graphHistory = [];
+}
+
+function setCircularOrbitSpeed() {
+  // v_c = 29.78 * sqrt(M_solar / r_AU) km/s
+  const vc = 29.78 * Math.sqrt(state.orbCentralMassSolar / state.orbR0_AU);
+  state.orbVr_kms = 0;
+  state.orbVt_kms = parseFloat(vc.toFixed(2));
+  resetOrbitalLaunch(true);
+  buildRightPanel();
+}
+
+function updateOrbitalLabFrame(dt) {
+  clearGroup(orbitalGroup);
+  const scale = 8.0; // 1 AU = 8 scene units
+
+  // Central Star
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(1.1, 28, 24), new THREE.MeshBasicMaterial({ color: 0xffb703 }));
+  orbitalGroup.add(sun);
+
+  const p = state.orbParticle;
+  const mu = state.orbCentralMassSolar; // In normalized units where GM_sun = 1
+
+  if (state.running) {
+    // Symplectic Velocity-Verlet integration
+    const subSteps = 8;
+    const h = (dt * 0.65) / subSteps;
+    for (let s = 0; s < subSteps; s++) {
+      const r = Math.hypot(p.x, p.z);
+      if (r > 0.14 && r < 25) {
+        const ax = (-mu * p.x) / Math.pow(r, 3);
+        const az = (-mu * p.z) / Math.pow(r, 3);
+        p.x += p.vx * h + 0.5 * ax * h * h;
+        p.z += p.vz * h + 0.5 * az * h * h;
+        const rNew = Math.hypot(p.x, p.z);
+        const axNew = (-mu * p.x) / Math.pow(rNew, 3);
+        const azNew = (-mu * p.z) / Math.pow(rNew, 3);
+        p.vx += 0.5 * (ax + axNew) * h;
+        p.vz += 0.5 * (az + azNew) * h;
+      }
+    }
+    p.trail.push(new THREE.Vector3(p.x * scale, 0, p.z * scale));
+    if (p.trail.length > 500) p.trail.shift();
+
+    // Kepler's 2nd Law equal-time sector sweeping
+    if (state.keplerSweepActive) {
+      p.sweepTimer += dt;
+      p.currentSector.push(new THREE.Vector3(p.x * scale, 0.02, p.z * scale));
+      if (p.sweepTimer > 0.65) {
+        if (p.currentSector.length > 2) {
+          p.sectors.push([...p.currentSector]);
+          if (p.sectors.length > 6) p.sectors.shift();
+        }
+        p.currentSector = [new THREE.Vector3(p.x * scale, 0.02, p.z * scale)];
+        p.sweepTimer = 0;
+      }
+    }
+  }
+
+  // Draw Trail
+  if (p.trail.length > 1) {
+    orbitalGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p.trail), new THREE.LineBasicMaterial({ color: 0x00d2ff })));
+  }
+
+  // Draw Kepler 2nd Law Swept Area Sectors
+  if (state.keplerSweepActive) {
+    p.sectors.forEach((sec, idx) => {
+      if (sec.length < 2) return;
+      const verts = [];
+      for (let i = 0; i < sec.length - 1; i++) {
+        verts.push(0, 0.02, 0, sec[i].x, 0.02, sec[i].z, sec[i + 1].x, 0.02, sec[i + 1].z);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+      const col = idx % 2 === 0 ? 0x00d2ff : 0xa855f7;
+      orbitalGroup.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.28 })));
+    });
+  }
+
+  // Test Planet Mesh & Vectors
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20), new THREE.MeshPhongMaterial({ color: 0x10b981 }));
+  mesh.position.set(p.x * scale, 0, p.z * scale);
+  orbitalGroup.add(mesh);
+
+  const vDir = new THREE.Vector3(p.vx, 0, p.vz).normalize();
+  orbitalGroup.add(new THREE.ArrowHelper(vDir, mesh.position, 2.4, 0x10b981, 0.4, 0.22));
+  const gDir = new THREE.Vector3(-p.x, 0, -p.z).normalize();
+  orbitalGroup.add(new THREE.ArrowHelper(gDir, mesh.position, 1.8, 0xf43f5e, 0.4, 0.22));
+}
+
+/* ============================================================================
+   7. MODULE 4: SPACETIME CURVATURE EXPLORER (3D LATTICE, FLAMM PARABOLOID, RUBBER SHEET)
+   ============================================================================ */
+function rebuildSpacetimeExplorer() {
+  clearGroup(spacetimeGroup);
+  const rsScene = Math.max(0.6, state.stMassSolar * 0.14); // Visual Schwarzschild radius r_s
+
+  // Central Mass / Black Hole Horizon
+  const coreCol = state.stMode === 'flamm' ? 0x000000 : 0xffb703;
+  const centerBody = new THREE.Mesh(new THREE.SphereGeometry(rsScene, 32, 24), new THREE.MeshBasicMaterial({ color: coreCol }));
+  spacetimeGroup.add(centerBody);
+  const ringHorizon = new THREE.Mesh(
+    new THREE.RingGeometry(rsScene * 1.01, rsScene * 1.12, 48),
+    new THREE.MeshBasicMaterial({ color: 0xf43f5e, side: THREE.DoubleSide })
+  );
+  ringHorizon.rotation.x = Math.PI / 2;
+  spacetimeGroup.add(ringHorizon);
+
+  if (state.stMode === 'spatial3d') {
+    // 3D Curved Spatial Lattice around the Central Mass
+    const pts = [];
+    const L = 12, step = 3;
+    for (let x = -L; x <= L; x += step) {
+      for (let y = -L; y <= L; y += step) {
+        for (let z = -L; z <= L; z += step) {
+          const pull = pos => {
+            const r = Math.max(rsScene * 1.15, pos.length());
+            const shift = (rsScene * 1.6) / (r * r);
+            return pos.clone().multiplyScalar(1 - shift);
+          };
+          const p0 = pull(new THREE.Vector3(x, y, z));
+          if (x + step <= L) { const px = pull(new THREE.Vector3(x + step, y, z)); pts.push(p0, px); }
+          if (y + step <= L) { const py = pull(new THREE.Vector3(x, y + step, z)); pts.push(p0, py); }
+          if (z + step <= L) { const pz = pull(new THREE.Vector3(x, y, z + step)); pts.push(p0, pz); }
+        }
+      }
+    }
+    spacetimeGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 })));
+  } else {
+    // 2D Grid / Flamm's Paraboloid z(r) = 2*sqrt(r_s*(r - r_s)) / Rubber Sheet
+    const N = 64, L = 15;
+    const verts = [], inds = [];
+    for (let i = 0; i <= N; i++) {
+      const x = -L + (2 * L * i) / N;
+      for (let j = 0; j <= N; j++) {
+        const z = -L + (2 * L * j) / N;
+        const r = Math.hypot(x, z);
+        let yHeight = 0;
+        if (state.stMode === 'flamm') {
+          const rClamped = Math.max(rsScene, r);
+          yHeight = -4.2 + 2.0 * Math.sqrt(rsScene * (rClamped - rsScene));
+        } else if (state.stMode === 'rubber_sheet') {
+          yHeight = (-rsScene * 4.5) / Math.sqrt(r * r + 1.5);
+        }
+        verts.push(x, yHeight, z);
+      }
+    }
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        const a = i * (N + 1) + j, b = (i + 1) * (N + 1) + j, c = (i + 1) * (N + 1) + (j + 1), d = i * (N + 1) + (j + 1);
+        inds.push(a, b, d, b, c, d);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setIndex(inds);
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    const col = state.stMode === 'rubber_sheet' ? 0xf59e0b : 0x00d2ff;
+    spacetimeGroup.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, wireframe: true, transparent: true, opacity: 0.45 })));
+  }
+}
+
+/* ============================================================================
+   8. MODULE 5 & 6: SCHWARZSCHILD GEODESICS & BLACK HOLE LABORATORY
+   ============================================================================ */
+function resetGRGeodesic() {
+  const r0 = state.grR0_rs;
+  // In geometrized units (r_s = 1, GM/c^2 = 0.5): circular angular momentum h_c = r / sqrt(2r - 3)
+  const hc = r0 > 1.55 ? (r0 / Math.sqrt(2 * r0 - 3)) : 2.5;
+  const h = hc * state.grVphiFactor;
+  const E = Math.sqrt((1 - 1 / r0) * (1 + (h * h) / (r0 * r0)));
+  state.grGeodesic = {
+    r: r0,
+    phi: 0,
+    vr: 0,
+    h,
+    E,
+    tau: 0,
+    t_coord: 0,
+    trail: []
+  };
+  state.graphHistory = [];
+}
+
+function updateGRAndBlackHoleFrame(dt) {
+  const isBH = state.module === 'blackhole';
+  const targetGroup = isBH ? bhGroup : grGroup;
+  clearGroup(targetGroup);
+
+  const rsVis = 2.0; // 1 r_s = 2.0 scene units for crisp inspection of 1.5 r_s and 3 r_s!
+
+  // 1. Event Horizon Sphere (r = r_s)
+  const ehMesh = new THREE.Mesh(new THREE.SphereGeometry(rsVis, 36, 28), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+  targetGroup.add(ehMesh);
+
+  // 2. Photon Sphere (r = 1.5 r_s = 3GM/c²)
+  const psRing = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(makeCirclePoints(1.5 * rsVis, 80)),
+    new THREE.LineBasicMaterial({ color: 0xfacc15 })
+  );
+  targetGroup.add(psRing);
+  const psLbl = makeTextSprite('Photon Sphere (1.5 rₛ)', '#facc15', 0.8);
+  psLbl.position.set(1.5 * rsVis, 0.5, 0);
+  targetGroup.add(psLbl);
+
+  // 3. Innermost Stable Circular Orbit ISCO (r = 3.0 r_s = 6GM/c²)
+  const iscoRing = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(makeCirclePoints(3.0 * rsVis, 90)),
+    new THREE.LineBasicMaterial({ color: 0x10b981 })
+  );
+  targetGroup.add(iscoRing);
+  const iscoLbl = makeTextSprite('ISCO (3.0 rₛ = 6GM/c²)', '#10b981', 0.85);
+  iscoLbl.position.set(-3.0 * rsVis, 0.5, 0);
+  targetGroup.add(iscoLbl);
+
+  // Optional Relativistic Accretion Disk (extending outside ISCO r >= 3 r_s)
+  if (isBH && state.bhShowAccretion) {
+    const diskGeo = new THREE.RingGeometry(3.0 * rsVis, 7.2 * rsVis, 64);
+    diskGeo.rotateX(Math.PI / 2);
+    const diskMat = new THREE.MeshBasicMaterial({ color: 0xf97316, side: THREE.DoubleSide, transparent: true, opacity: 0.35 });
+    targetGroup.add(new THREE.Mesh(diskGeo, diskMat));
+  }
+
+  // Integrate Schwarzschild Geodesic: d²r/dτ² = -dV_eff/dr
+  // In units r_s = 1 (so GM = 0.5): d²r/dτ² = -0.5/r² + h²/r³ - 1.5*h²/r⁴ (for timelike)
+  const g = state.grGeodesic;
+  if (state.running && g.r > 1.02 && g.r < 25) {
+    const hStep = dt * 1.2;
+    const isNull = state.grParticleType === 'null';
+    const accel = r => isNull
+      ? (g.h * g.h) / Math.pow(r, 3) - (1.5 * g.h * g.h) / Math.pow(r, 4)
+      : -0.5 / (r * r) + (g.h * g.h) / Math.pow(r, 3) - (1.5 * g.h * g.h) / Math.pow(r, 4);
+
+    const a1 = accel(g.r);
+    g.r += g.vr * hStep + 0.5 * a1 * hStep * hStep;
+    const a2 = accel(Math.max(1.01, g.r));
+    g.vr += 0.5 * (a1 + a2) * hStep;
+    g.phi += (g.h / (g.r * g.r)) * hStep;
+    g.tau += hStep;
+    g.t_coord += (g.E / Math.max(0.05, 1 - 1 / g.r)) * hStep;
+
+    const px = g.r * rsVis * Math.cos(g.phi);
+    const pz = g.r * rsVis * Math.sin(g.phi);
+    g.trail.push(new THREE.Vector3(px, 0, pz));
+    if (g.trail.length > 550) g.trail.shift();
+  }
+
+  if (g.trail.length > 1) {
+    targetGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(g.trail), new THREE.LineBasicMaterial({ color: 0x00d2ff })));
+    const lastPt = g.trail[g.trail.length - 1];
+    const probe = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    probe.position.copy(lastPt);
+    targetGroup.add(probe);
+  }
+}
+
+function makeCirclePoints(rad, segs) {
+  const pts = [];
+  for (let i = 0; i <= segs; i++) {
+    const a = (2 * Math.PI * i) / segs;
+    pts.push(new THREE.Vector3(rad * Math.cos(a), 0, rad * Math.sin(a)));
+  }
+  return pts;
+}
+
+/* ============================================================================
+   9. MODULE 7: GRAVITATIONAL LENSING & EINSTEIN RING LAB
+   ============================================================================ */
+function rebuildLensingLab() {
+  clearGroup(lensingGroup);
+
+  // Foreground Lens Mass at (0,0,0), Background Star at (-14, 0, z_src), Observer at (+14, 0, 0)
+  const lensMesh = new THREE.Mesh(new THREE.SphereGeometry(1.1, 28, 24), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+  lensingGroup.add(lensMesh);
+  const lensHalo = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.4, 40), new THREE.MeshBasicMaterial({ color: 0xf43f5e, side: THREE.DoubleSide }));
+  lensHalo.rotation.y = Math.PI / 2;
+  lensingGroup.add(lensHalo);
+
+  const srcZ = state.lensSourceOffset * 4.0;
+  const srcPos = new THREE.Vector3(-14, 0, srcZ);
+  const obsPos = new THREE.Vector3(14, 0, 0);
+
+  const starMesh = new THREE.Mesh(new THREE.SphereGeometry(0.55, 20, 20), new THREE.MeshBasicMaterial({ color: 0xfde047 }));
+  starMesh.position.copy(srcPos);
+  lensingGroup.add(starMesh);
+  const starLbl = makeTextSprite('True Background Star', '#fde047', 0.85);
+  starLbl.position.set(srcPos.x, 1.4, srcPos.z);
+  lensingGroup.add(starLbl);
+
+  const obsMesh = new THREE.Mesh(new THREE.SphereGeometry(0.45, 20, 20), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+  obsMesh.position.copy(obsPos);
+  lensingGroup.add(obsMesh);
+  const obsLbl = makeTextSprite('Observer (Telescope)', '#38bdf8', 0.85);
+  obsLbl.position.set(obsPos.x, 1.4, 0);
+  lensingGroup.add(obsLbl);
+
+  // Weak-field deflection angle alpha = 4GM / (b c^2) = 2 * r_s / b
+  const b = state.lensImpactB_rs;
+  const rsScaled = state.lensMassSolar * 0.03;
+  const alphaRad = Math.min(0.65, (2 * rsScaled) / b);
+
+  // Upper & Lower Deflected Light Paths + Apparent Image Positions
+  [1, -1].forEach(sign => {
+    const midPt = new THREE.Vector3(0, 0, sign * b * 1.1 + srcZ * 0.25);
+    const curve = new THREE.QuadraticBezierCurve3(srcPos, midPt, obsPos);
+    const pts = curve.getPoints(50);
+    lensingGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x00d2ff })));
+
+    // Apparent straight-line projection backward from Observer's line of sight
+    const tangentAtObs = obsPos.clone().sub(midPt).normalize();
+    const appPos = obsPos.clone().sub(tangentAtObs.multiplyScalar(28));
+    const extLine = makeDashedLine3D(obsPos, appPos, 0xc084fc);
+    lensingGroup.add(extLine);
+
+    const appStar = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 16), new THREE.MeshBasicMaterial({ color: 0xc084fc }));
+    appStar.position.copy(appPos);
+    lensingGroup.add(appStar);
+    const appLbl = makeTextSprite('Apparent Lensed Image', '#c084fc', 0.78);
+    appLbl.position.set(appPos.x, 1.2, appPos.z);
+    lensingGroup.add(appLbl);
+  });
+
+  // If collinear (lensSourceOffset ≈ 0), display the 3D Einstein Ring in the YZ plane!
+  if (Math.abs(state.lensSourceOffset) < 0.08) {
+    const einsteinRing = new THREE.Mesh(
+      new THREE.RingGeometry(b * 1.05, b * 1.22, 64),
+      new THREE.MeshBasicMaterial({ color: 0x00d2ff, side: THREE.DoubleSide })
+    );
+    einsteinRing.rotation.y = Math.PI / 2;
+    lensingGroup.add(einsteinRing);
+    const erLbl = makeTextSprite('★ EINSTEIN RING (Collinear Alignment) ★', '#00d2ff', 1.0);
+    erLbl.position.set(0, b * 1.45, 0);
+    lensingGroup.add(erLbl);
+  }
+
+  // Flat-spacetime unbent reference ray
+  if (state.lensShowFlatRay) {
+    lensingGroup.add(makeDashedLine3D(srcPos, obsPos, 0x64748b));
+  }
+}
+
+function makeDashedLine3D(p1, p2, colHex) {
+  const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+  const line = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: colHex, dashSize: 0.5, gapSize: 0.3 }));
+  line.computeLineDistances();
+  return line;
+}
+
+/* ============================================================================
+   10. MODULE 8: GRAVITATIONAL TIME DILATION LAB (CLOCK A VS CLOCK B)
+   ============================================================================ */
+function updateTimeDilationFrame(dt) {
+  clearGroup(tdGroup);
+  if (state.running) state.tdCoordTime += dt * 10;
+
+  const rsVis = 2.0;
+  const bh = new THREE.Mesh(new THREE.SphereGeometry(rsVis, 32, 24), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+  tdGroup.add(bh);
+  const horizonRing = new THREE.Line(new THREE.BufferGeometry().setFromPoints(makeCirclePoints(rsVis * 1.02, 64)), new THREE.LineBasicMaterial({ color: 0xf43f5e }));
+  tdGroup.add(horizonRing);
+
+  const factorA = Math.sqrt(Math.max(0.01, 1 - 1 / state.tdClockAR_rs));
+  const factorB = Math.sqrt(Math.max(0.01, 1 - 1 / state.tdClockBR_rs));
+  const tauA = state.tdCoordTime * factorA;
+  const tauB = state.tdCoordTime * factorB;
+
+  const drawClock3D = (r_rs, tau, colHex, nameStr) => {
+    const xPos = r_rs * rsVis;
+    const face = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.15, 32), new THREE.MeshBasicMaterial({ color: 0x0f172a }));
+    face.rotation.x = Math.PI / 2;
+    face.position.set(xPos, 0, 0);
+    tdGroup.add(face);
+
+    const handAng = -(tau % 60) * (2 * Math.PI / 60);
+    const handDir = new THREE.Vector3(Math.sin(handAng), Math.cos(handAng), 0);
+    tdGroup.add(new THREE.ArrowHelper(handDir, new THREE.Vector3(xPos, 0, 0.15), 0.9, colHex, 0.28, 0.18));
+
+    const lbl = makeTextSprite(`${nameStr}: τ = ${tau.toFixed(1)} s`, '#' + colHex.toString(16).padStart(6, '0'), 0.9);
+    lbl.position.set(xPos, 1.7, 0);
+    tdGroup.add(lbl);
+  };
+
+  drawClock3D(state.tdClockAR_rs, tauA, 0xf43f5e, `Clock A (r=${state.tdClockAR_rs.toFixed(2)} rₛ)`);
+  drawClock3D(state.tdClockBR_rs, tauB, 0x10b981, `Clock B (r=${state.tdClockBR_rs.toFixed(1)} rₛ)`);
+}
+
+/* ============================================================================
+   11. MODULE 9: NEWTONIAN VS GENERAL RELATIVITY PERIHELION PRECESSION
+   ============================================================================ */
+function rebuildCompareNewtonGR() {
+  clearGroup(compareGroup);
+
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(1.2, 28, 24), new THREE.MeshBasicMaterial({ color: 0xffb703 }));
+  compareGroup.add(sun);
+
+  const a = state.compSemiMajor_rs;
+  const e = state.compEccentricity;
+  const p = a * (1 - e * e);
+
+  // Leading-order GR perihelion shift per orbit: Δφ = 6π GM / [a(1 - e²)c²] = 3π r_s / p
+  const deltaPhiPerOrbit = (3 * Math.PI) / p;
+
+  const newtPts = [], grPts = [];
+  const totalPhi = 6 * Math.PI; // 3 full revolutions
+  const steps = 450;
+  for (let i = 0; i <= steps; i++) {
+    const phi = (totalPhi * i) / steps;
+    const rNewt = p / (1 + e * Math.cos(phi));
+    newtPts.push(new THREE.Vector3(rNewt * Math.cos(phi), 0, rNewt * Math.sin(phi)));
+
+    // Precessing GR ellipse r(φ) = p / [1 + e cos((1 - Δφ/2π) φ)]
+    const k = 1 - deltaPhiPerOrbit / (2 * Math.PI);
+    const rGR = p / (1 + e * Math.cos(k * phi));
+    grPts.push(new THREE.Vector3(rGR * Math.cos(phi), 0.05, rGR * Math.sin(phi)));
+  }
+
+  compareGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(newtPts), new THREE.LineBasicMaterial({ color: 0x10b981 })));
+  compareGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(grPts), new THREE.LineBasicMaterial({ color: 0xf43f5e })));
+
+  const l1 = makeTextSprite('Newtonian (Closed Ellipse, Δφ = 0)', '#10b981', 0.9);
+  l1.position.set(-a, 1.8, -a);
+  const l2 = makeTextSprite(`General Relativity (Precessing Rosette, Δφ = ${(deltaPhiPerOrbit * 180 / Math.PI).toFixed(1)}°/orbit)`, '#f43f5e', 0.95);
+  l2.position.set(a, 1.8, a);
+  compareGroup.add(l1, l2);
+}
+
+/* ============================================================================
+   12. MODULE 10: CUSTOM N-BODY SANDBOX, GUIDED COURSE & CHALLENGES
+   ============================================================================ */
+function initDefaultNBody() {
+  state.nBodies = [
+    { name: 'Star A', m: 1.0, x: -3.5, z: 0, vx: 0, vz: -0.35, color: 0xffb703, trail: [] },
+    { name: 'Star B', m: 0.7, x: 5.0, z: 0, vx: 0, vz: 0.5, color: 0x38bdf8, trail: [] },
+    { name: 'Planet C', m: 0.02, x: 0, z: 9.5, vx: -0.95, vz: 0, color: 0x10b981, trail: [] }
+  ];
+}
+
+function updateNBodyFrame(dt) {
+  clearGroup(nbodyGroup);
+  const bodies = state.nBodies;
+  if (state.running) {
+    const h = dt * 1.4;
+    const G_sim = 8.0;
+    const acc = bodies.map(() => ({ ax: 0, az: 0 }));
+    for (let i = 0; i < bodies.length; i++) {
+      for (let j = 0; j < bodies.length; j++) {
+        if (i === j) continue;
+        const dx = bodies[j].x - bodies[i].x;
+        const dz = bodies[j].z - bodies[i].z;
+        const distSq = dx * dx + dz * dz + 0.35; // Softening prevents numerical blowup on close encounter
+        const f = (G_sim * bodies[j].m) / Math.pow(distSq, 1.5);
+        acc[i].ax += f * dx;
+        acc[i].az += f * dz;
+      }
+    }
+    bodies.forEach((b, i) => {
+      b.vx += acc[i].ax * h;
+      b.vz += acc[i].az * h;
+      b.x += b.vx * h;
+      b.z += b.vz * h;
+      b.trail.push(new THREE.Vector3(b.x, 0, b.z));
+      if (b.trail.length > 260) b.trail.shift();
+    });
+  }
+
+  bodies.forEach(b => {
+    const r = Math.max(0.35, Math.pow(b.m, 0.3) * 0.9);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 20), new THREE.MeshPhongMaterial({ color: b.color }));
+    m.position.set(b.x, 0, b.z);
+    nbodyGroup.add(m);
+    if (b.trail.length > 1) {
+      nbodyGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(b.trail), new THREE.LineBasicMaterial({ color: b.color })));
+    }
+  });
+}
+
+/* ============================================================================
+   13. UI MODULE SWITCHER, DYNAMIC LEFT/RIGHT DRAWERS & BOTTOM LIVE GRAPH
+   ============================================================================ */
+function selectModule(mod) {
+  state.module = mod;
+  state.graphHistory = [];
+  document.querySelectorAll('.mod-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById(`mod-${mod}`);
+  if (btn) btn.classList.add('active');
+
+  solarGroup.visible = mod === 'solar';
+  newtonGroup.visible = mod === 'newton';
+  orbitalGroup.visible = mod === 'orbital';
+  spacetimeGroup.visible = mod === 'spacetime';
+  grGroup.visible = mod === 'gr';
+  bhGroup.visible = mod === 'blackhole';
+  lensingGroup.visible = mod === 'lensing';
+  tdGroup.visible = mod === 'timedilation';
+  compareGroup.visible = mod === 'compare';
+  nbodyGroup.visible = mod === 'experiments';
+
+  document.getElementById('scale-alert-pill').style.display = mod === 'solar' ? 'block' : 'none';
+
+  if (mod === 'newton') rebuildNewtonianLab();
+  if (mod === 'spacetime') rebuildSpacetimeExplorer();
+  if (mod === 'lensing') rebuildLensingLab();
+  if (mod === 'compare') rebuildCompareNewtonGR();
+
+  buildLeftPanel();
+  buildRightPanel();
+}
+
+function buildLeftPanel() {
+  const el = document.getElementById('dynamic-left-panel');
+  const mod = state.module;
+
+  if (mod === 'solar') {
+    const sel = SOLAR_BODIES.find(b => b.id === state.selectedBodyId) || SOLAR_BODIES[3];
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Select Celestial Body</span></div>
+        <div class="planet-grid">
+          ${SOLAR_BODIES.map(b => `
+            <button class="planet-btn ${b.id === state.selectedBodyId ? 'selected' : ''}" onclick="selectSolarBody('${b.id}')">${b.name.split(' ')[0]}</button>
+          `).join('')}
+        </div>
+        <div class="info-card">
+          <h4>${sel.name} (${sel.type})</h4>
+          <p style="margin-bottom:6px; color:var(--text-muted);">${sel.desc}</p>
+          <table class="data-table">
+            <tr><td>Mass (M)</td><td class="val">${sel.massKg.toExponential(3)} kg</td></tr>
+            <tr><td>Mean Radius (R)</td><td class="val">${sel.radiusKm.toLocaleString()} km</td></tr>
+            <tr><td>Semi-Major Axis (a)</td><td class="val">${sel.a_AU} AU</td></tr>
+            <tr><td>Eccentricity (e)</td><td class="val">${sel.e}</td></tr>
+            <tr><td>Orbital Period (T)</td><td class="val">${sel.periodDays} days</td></tr>
+            <tr><td>Mean Speed (v)</td><td class="val">${sel.v_kms} km/s</td></tr>
+            <tr><td>Std Grav Param (GM)</td><td class="val">${sel.gm} m³/s²</td></tr>
+          </table>
+        </div>
+      </div>
+    `;
+  } else {
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Active Laboratory Overview</span></div>
+        <div class="info-card">
+          <h4>Module: ${mod.toUpperCase()}</h4>
+          <p style="color:var(--text-muted);">
+            Use the Right Drawer to adjust physical parameters (Mass, Distance, Velocity, Impact Parameter) and inspect the live mathematical equations and model assumptions.
+          </p>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function buildRightPanel() {
+  const el = document.getElementById('dynamic-right-panel');
+  const mod = state.module;
+
+  if (mod === 'solar') {
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Scale Mode &amp; Speed Controls</span></div>
+        <div style="display:flex; gap:5px; margin-bottom:8px;">
+          <button class="btn-sm ${state.scaleViewMode==='educational'?'active-toggle':''}" style="flex:1;" onclick="setScaleMode('educational')">Educational View</button>
+          <button class="btn-sm ${state.scaleViewMode==='scale_aware'?'active-toggle':''}" style="flex:1;" onclick="setScaleMode('scale_aware')">Scale-Aware View</button>
+        </div>
+        <div class="warn-banner">
+          <strong>Scale Disclosure:</strong> True Solar System radii span 10⁵× relative to orbital distances. "${state.scaleViewMode === 'educational' ? 'Educational View exaggerates planet sizes and uses √AU distance compression.' : 'Scale-Aware View uses linear 1 AU = 8 unit distances.'}"
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Simulation Speed</span><span class="val">${state.simDaysPerSec} days/s</span></div>
+          <input type="range" min="1" max="200" step="1" value="${state.simDaysPerSec}" oninput="state.simDaysPerSec=parseFloat(this.value); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Planet Size Exaggeration</span><span class="val">${state.planetSizeExag.toFixed(1)}×</span></div>
+          <input type="range" min="0.4" max="2.5" step="0.1" value="${state.planetSizeExag}" oninput="state.planetSizeExag=parseFloat(this.value); initSolarSystem3D(); buildRightPanel()">
+        </div>
+        <div class="formula-box">
+          Kepler's 3rd Law: T² = (4π² / G(M + m)) a³<br>
+          Vis-Viva Speed: v² = GM (2/r − 1/a)
+        </div>
+      </div>
+    `;
+  } else if (mod === 'newton') {
+    const F_mag = (CONST.G * state.newtBody1MassSolar * CONST.M_sun * state.newtBody2MassEarth * CONST.M_earth) / Math.pow(state.newtSeparationAU * CONST.AU, 2);
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Newton's Law &amp; Field Controls</span></div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Mass 1 (M₁ in Solar Masses)</span><span class="val">${state.newtBody1MassSolar.toFixed(1)} M☉</span></div>
+          <input type="range" min="0.5" max="5.0" step="0.5" value="${state.newtBody1MassSolar}" oninput="state.newtBody1MassSolar=parseFloat(this.value); rebuildNewtonianLab(); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Mass 2 (m₂ in Earth Masses)</span><span class="val">${state.newtBody2MassEarth.toFixed(1)} M⊕</span></div>
+          <input type="range" min="0.5" max="5.0" step="0.5" value="${state.newtBody2MassEarth}" oninput="state.newtBody2MassEarth=parseFloat(this.value); rebuildNewtonianLab(); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Separation Distance (r)</span><span class="val">${state.newtSeparationAU.toFixed(2)} AU</span></div>
+          <input type="range" min="0.5" max="3.0" step="0.25" value="${state.newtSeparationAU}" oninput="state.newtSeparationAU=parseFloat(this.value); rebuildNewtonianLab(); buildRightPanel()">
+        </div>
+        <div style="display:flex; gap:4px; margin-bottom:8px;">
+          <button class="btn-sm" style="flex:1;" onclick="state.newtSeparationAU=1.0; rebuildNewtonianLab(); buildRightPanel()">r = 1 AU (F₀)</button>
+          <button class="btn-sm" style="flex:1;" onclick="state.newtSeparationAU=2.0; rebuildNewtonianLab(); buildRightPanel()">r = 2 AU (F₀/4)</button>
+        </div>
+        <label class="chk-lbl" style="margin-bottom:6px;"><input type="checkbox" ${state.showPotentialSurface?'checked':''} onchange="state.showPotentialSurface=this.checked; rebuildNewtonianLab()"> Show Potential Well Φ = −GM/r</label>
+        <div class="formula-box">
+          |F₁₂| = |F₂₁| = G m₁ m₂ / r² = ${F_mag.toExponential(3)} N<br>
+          Vector Form: F₁₂ = −G m₁ m₂ (r₁ − r₂) / |r₁ − r₂|³<br>
+          Field: g = GM/r²  |  Potential: Φ = −GM/r
+        </div>
+      </div>
+    `;
+  } else if (mod === 'orbital') {
+    const vc = 29.78 * Math.sqrt(state.orbCentralMassSolar / state.orbR0_AU);
+    const vesc = vc * Math.SQRT2;
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Launch Your Own Planet &amp; Kepler Lab</span></div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Central Star Mass (M)</span><span class="val">${state.orbCentralMassSolar.toFixed(1)} M☉</span></div>
+          <input type="range" min="0.5" max="3.0" step="0.25" value="${state.orbCentralMassSolar}" oninput="state.orbCentralMassSolar=parseFloat(this.value); resetOrbitalLaunch(true); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Initial Distance (r₀)</span><span class="val">${state.orbR0_AU.toFixed(2)} AU</span></div>
+          <input type="range" min="0.6" max="3.0" step="0.1" value="${state.orbR0_AU}" oninput="state.orbR0_AU=parseFloat(this.value); resetOrbitalLaunch(true); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Tangential Speed (v_t)</span><span class="val">${state.orbVt_kms.toFixed(2)} km/s</span></div>
+          <input type="range" min="5" max="48" step="0.2" value="${state.orbVt_kms}" oninput="state.orbVt_kms=parseFloat(this.value); resetOrbitalLaunch(true); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Radial Speed (v_r)</span><span class="val">${state.orbVr_kms.toFixed(1)} km/s</span></div>
+          <input type="range" min="-15" max="15" step="0.5" value="${state.orbVr_kms}" oninput="state.orbVr_kms=parseFloat(this.value); resetOrbitalLaunch(true); buildRightPanel()">
+        </div>
+        <button class="btn-sm" style="width:100%; background:var(--accent); color:#040811; font-weight:700; margin-bottom:6px;" onclick="setCircularOrbitSpeed()">⚡ Calculate &amp; Launch Circular Speed (${vc.toFixed(2)} km/s)</button>
+        <div style="display:flex; gap:4px; margin-bottom:6px;">
+          <button class="btn-sm" style="flex:1;" onclick="state.orbVt_kms=parseFloat((vc*1.2).toFixed(2)); resetOrbitalLaunch(true); buildRightPanel()">Elliptical</button>
+          <button class="btn-sm" style="flex:1;" onclick="state.orbVt_kms=parseFloat(vesc.toFixed(2)); resetOrbitalLaunch(true); buildRightPanel()">Escape (ε=0)</button>
+          <button class="btn-sm" style="flex:1;" onclick="state.orbVt_kms=parseFloat((vesc*1.18).toFixed(2)); resetOrbitalLaunch(true); buildRightPanel()">Hyperbolic</button>
+        </div>
+        <label class="chk-lbl"><input type="checkbox" ${state.keplerSweepActive?'checked':''} onchange="state.keplerSweepActive=this.checked"> Show Kepler 2nd Law Equal-Area Sectors</label>
+        <div class="formula-box">
+          Circular Speed: v_c = √(GM/r) = ${vc.toFixed(2)} km/s<br>
+          Specific Energy: ε = v²/2 − GM/r<br>
+          Specific Angular Momentum: h = |r × v|
+        </div>
+      </div>
+    `;
+  } else if (mod === 'spacetime') {
+    const rsKm = (2 * CONST.G * state.stMassSolar * CONST.M_sun) / (CONST.c * CONST.c) / 1000;
+    const metricFactor = 1 / Math.sqrt(Math.max(0.01, 1 - 1 / state.stProbeR_rs));
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Spacetime Geometry &amp; Embedding Mode</span></div>
+        <select style="margin-bottom:8px;" onchange="state.stMode=this.value; rebuildSpacetimeExplorer(); buildRightPanel()">
+          <option value="flamm" ${state.stMode==='flamm'?'selected':''}>1. Schwarzschild Flamm's Paraboloid (Exact Spatial Slice)</option>
+          <option value="spatial3d" ${state.stMode==='spatial3d'?'selected':''}>2. 3D Curved Spatial Coordinate Lattice</option>
+          <option value="flat" ${state.stMode==='flat'?'selected':''}>3. Flat Minkowski Reference Grid (M = 0)</option>
+          <option value="rubber_sheet" ${state.stMode==='rubber_sheet'?'selected':''}>4. Introductory Rubber-Sheet Analogy</option>
+        </select>
+        ${state.stMode === 'rubber_sheet' ? `
+          <div class="warn-banner">
+            <strong>Analogy Limitation Warning:</strong> The deformation of a rubber sheet uses an external downward gravitational force into an extra dimension. Real 4D spacetime curvature is intrinsic (governed by the metric tensor g_μν) and includes gravitational time dilation (g_tt), which plays the dominant role in ordinary planetary orbits!
+          </div>
+        ` : ''}
+        <div class="slider-row">
+          <div class="slider-head"><span>Central Mass (M)</span><span class="val">${state.stMassSolar.toFixed(1)} M☉ (rₛ = ${rsKm.toFixed(1)} km)</span></div>
+          <input type="range" min="1" max="30" step="1" value="${state.stMassSolar}" oninput="state.stMassSolar=parseFloat(this.value); rebuildSpacetimeExplorer(); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Inspect Radial Coordinate (r / rₛ)</span><span class="val">${state.stProbeR_rs.toFixed(2)} rₛ</span></div>
+          <input type="range" min="1.05" max="10" step="0.05" value="${state.stProbeR_rs}" oninput="state.stProbeR_rs=parseFloat(this.value); buildRightPanel()">
+        </div>
+        <div class="formula-box">
+          Flamm's Paraboloid: z(r) = 2√(rₛ(r − rₛ))<br>
+          Proper Radial Stretch: dρ / dr = (1 − rₛ/r)⁻¹/² = ${metricFactor.toFixed(4)}
+        </div>
+      </div>
+    `;
+  } else if (mod === 'gr' || mod === 'blackhole') {
+    const M_kg = state.grMassSolar * CONST.M_sun;
+    const rs_m = (2 * CONST.G * M_kg) / (CONST.c * CONST.c);
+    const r_m = state.grGeodesic.r * rs_m;
+    const kretschmann = (48 * Math.pow(CONST.G * M_kg, 2)) / (Math.pow(CONST.c, 4) * Math.pow(r_m, 6));
+    const zGrav = 1 / Math.sqrt(Math.max(0.001, 1 - 1 / state.grGeodesic.r)) - 1;
+
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Schwarzschild Metric &amp; Geodesics</span></div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Black Hole Mass (M)</span><span class="val">${state.grMassSolar.toFixed(0)} M☉ (rₛ = ${(rs_m/1000).toFixed(1)} km)</span></div>
+          <input type="range" min="3" max="50" step="1" value="${state.grMassSolar}" oninput="state.grMassSolar=parseFloat(this.value); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Initial Radius (r₀ in rₛ)</span><span class="val">${state.grR0_rs.toFixed(2)} rₛ</span></div>
+          <input type="range" min="1.6" max="10" step="0.1" value="${state.grR0_rs}" oninput="state.grR0_rs=parseFloat(this.value); resetGRGeodesic(); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Angular Momentum Factor (h / h_circ)</span><span class="val">${state.grVphiFactor.toFixed(2)}</span></div>
+          <input type="range" min="0.7" max="1.35" step="0.02" value="${state.grVphiFactor}" oninput="state.grVphiFactor=parseFloat(this.value); resetGRGeodesic(); buildRightPanel()">
+        </div>
+        <div class="formula-box">
+          ds² = −(1−rₛ/r)c²dt² + (1−rₛ/r)⁻¹dr² + r²dΩ²<br>
+          Event Horizon: rₛ = 2GM/c² (Coord Singularity)<br>
+          Photon Sphere: r_ph = 1.5 rₛ  |  ISCO: r_ISCO = 3.0 rₛ<br>
+          Kretschmann Scalar: K = 48G²M²/(c⁴r⁶) = ${kretschmann.toExponential(2)} m⁻⁴<br>
+          Gravitational Redshift: z = ${zGrav.toFixed(4)}
+        </div>
+      </div>
+    `;
+  } else if (mod === 'lensing') {
+    const alphaArcsec = (2 * state.lensMassSolar * 0.03 / state.lensImpactB_rs) * 206265 * 1e-4;
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Gravitational Lensing Controls</span></div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Foreground Lens Mass</span><span class="val">${state.lensMassSolar.toFixed(0)} M☉</span></div>
+          <input type="range" min="10" max="100" step="5" value="${state.lensMassSolar}" oninput="state.lensMassSolar=parseFloat(this.value); rebuildLensingLab(); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Impact Parameter (b)</span><span class="val">${state.lensImpactB_rs.toFixed(1)} rₛ</span></div>
+          <input type="range" min="2.0" max="8.0" step="0.2" value="${state.lensImpactB_rs}" oninput="state.lensImpactB_rs=parseFloat(this.value); rebuildLensingLab(); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Source Alignment Offset</span><span class="val">${state.lensSourceOffset.toFixed(2)}</span></div>
+          <input type="range" min="-1.5" max="1.5" step="0.05" value="${state.lensSourceOffset}" oninput="state.lensSourceOffset=parseFloat(this.value); rebuildLensingLab(); buildRightPanel()">
+        </div>
+        <button class="btn-sm" style="width:100%; background:var(--accent); color:#040811; font-weight:700;" onclick="state.lensSourceOffset=0; rebuildLensingLab(); buildRightPanel()">★ Align Source for Einstein Ring (Offset = 0)</button>
+        <div class="formula-box">
+          Weak-Field Deflection: α ≈ 4GM / (b c²) = 2 rₛ / b<br>
+          (Factor of 2 larger than naive Newtonian corpuscular prediction!)
+        </div>
+      </div>
+    `;
+  } else if (mod === 'timedilation') {
+    const facA = Math.sqrt(Math.max(0.001, 1 - 1 / state.tdClockAR_rs));
+    const facB = Math.sqrt(Math.max(0.001, 1 - 1 / state.tdClockBR_rs));
+    const srFac = Math.sqrt(1 - state.tdVelocityBeta * state.tdVelocityBeta);
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Gravitational vs Special-Relativistic Time Dilation</span></div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Clock A Radius (Near Horizon)</span><span class="val">${state.tdClockAR_rs.toFixed(2)} rₛ</span></div>
+          <input type="range" min="1.05" max="5.0" step="0.05" value="${state.tdClockAR_rs}" oninput="state.tdClockAR_rs=parseFloat(this.value); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Clock B Radius (Far Observer)</span><span class="val">${state.tdClockBR_rs.toFixed(1)} rₛ</span></div>
+          <input type="range" min="5.0" max="20.0" step="0.5" value="${state.tdClockBR_rs}" oninput="state.tdClockBR_rs=parseFloat(this.value); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>SR Velocity Comparison (v / c)</span><span class="val">${state.tdVelocityBeta.toFixed(2)} c</span></div>
+          <input type="range" min="0" max="0.95" step="0.05" value="${state.tdVelocityBeta}" oninput="state.tdVelocityBeta=parseFloat(this.value); buildRightPanel()">
+        </div>
+        <div class="formula-box">
+          Stationary GR Clock: dτ = dt √(1 − rₛ/r)<br>
+          Clock A Rate: dτ_A/dt = ${facA.toFixed(4)} | Clock B: ${facB.toFixed(4)}<br>
+          Moving SR Clock: dτ = dt √(1 − v²/c²) = ${srFac.toFixed(4)}
+        </div>
+      </div>
+    `;
+  } else if (mod === 'compare') {
+    const p = state.compSemiMajor_rs * (1 - state.compEccentricity * state.compEccentricity);
+    const dPhiDeg = ((3 * Math.PI) / p) * (180 / Math.PI);
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>Newtonian vs General Relativity Comparison</span></div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Semi-Major Axis (a in rₛ)</span><span class="val">${state.compSemiMajor_rs.toFixed(1)} rₛ</span></div>
+          <input type="range" min="4.5" max="20" step="0.5" value="${state.compSemiMajor_rs}" oninput="state.compSemiMajor_rs=parseFloat(this.value); rebuildCompareNewtonGR(); buildRightPanel()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Orbital Eccentricity (e)</span><span class="val">${state.compEccentricity.toFixed(2)}</span></div>
+          <input type="range" min="0.1" max="0.75" step="0.05" value="${state.compEccentricity}" oninput="state.compEccentricity=parseFloat(this.value); rebuildCompareNewtonGR(); buildRightPanel()">
+        </div>
+        <div class="formula-box">
+          GR Perihelion Advance per Orbit:<br>
+          Δφ ≈ 6πGM / [a(1 − e²)c²] = ${dPhiDeg.toFixed(2)}° / orbit
+        </div>
+      </div>
+    `;
+  } else if (mod === 'experiments') {
+    el.innerHTML = `
+      <div class="panel-sec">
+        <div class="sec-title"><span>N-Body Sandbox, 10 Lessons &amp; 8 Challenges</span></div>
+        <div style="display:flex; gap:4px; margin-bottom:8px;">
+          <button class="btn-sm ${state.expSubTab==='nbody'?'active-toggle':''}" style="flex:1;" onclick="state.expSubTab='nbody'; buildRightPanel()">N-Body Lab</button>
+          <button class="btn-sm ${state.expSubTab==='guided'?'active-toggle':''}" style="flex:1;" onclick="state.expSubTab='guided'; buildRightPanel()">10 Lessons</button>
+          <button class="btn-sm ${state.expSubTab==='quiz'?'active-toggle':''}" style="flex:1;" onclick="state.expSubTab='quiz'; buildRightPanel()">8 Quizzes</button>
+        </div>
+        ${renderExperimentsTabHTML()}
+      </div>
+    `;
+  }
+}
+
+/* ============================================================================
+   14. GUIDED LESSONS, CHALLENGES & N-BODY CONTROLS (MODULE 10)
+   ============================================================================ */
+const LESSONS = [
+  { t: '1. Why Do Planets Orbit the Sun?', b: 'A planet has tangential inertia while the Sun pulls it inward with gravity F = GMm/r², continually curving its path into a closed conic section.' },
+  { t: '2. Why Does a Planet Speed Up Near Perihelion?', b: 'Conservation of angular momentum h = |r × v| requires orbital speed v to increase when radial distance r decreases (Kepler\'s 2nd Law).' },
+  { t: '3. Inverse-Square Law of Gravity', b: 'Doubling the separation distance r reduces gravitational attraction by a factor of 2² = 4.' },
+  { t: '4. Orbital Escape Velocity', b: 'When kinetic energy v²/2 equals gravitational potential magnitude GM/r (total specific energy ε = 0), the body escapes on a parabolic trajectory at v_esc = √(2GM/r).' },
+  { t: '5. How Mass Affects Spacetime', b: 'In General Relativity, mass-energy curves 4-dimensional spacetime geometry; free-falling bodies follow spacetime geodesics.' },
+  { t: '6. Spatial Curvature vs. Spacetime Curvature', b: 'Planetary orbits are governed primarily by the time-component of the metric (g_tt = −(1 − r_s/r)), not merely 3D spatial bending.' },
+  { t: '7. Gravitational Time Dilation', b: 'A stationary clock deeper in a gravitational potential well ticks slower relative to a distant clock: dτ = dt √(1 − r_s/r).' },
+  { t: '8. How Gravity Deflects Massless Light', b: 'Photons follow null geodesics (ds² = 0) through curved spacetime, bending by α ≈ 4GM/(bc²) near a mass M.' },
+  { t: '9. Event Horizon vs. Photon Sphere vs. ISCO', b: 'For a Schwarzschild black hole: Event Horizon is at r_s = 2GM/c², unstable light orbits at 1.5 r_s, and innermost stable matter orbits at 3.0 r_s.' },
+  { t: '10. When Is General Relativity Necessary?', b: 'Whenever r approaches r_s (compact objects) or high precision is required (GPS satellite clocks, Mercury\'s perihelion advance).' }
+];
+
+const QUIZZES = [
+  { q: '1. If the distance between two stars doubles while their masses stay constant, the gravitational force becomes:', o: ['Half (1/2)', 'One-Quarter (1/4)', 'Double (2×)', 'Unchanged'], a: 1, e: 'By F = Gm₁m₂/r², doubling r divides F by 2² = 4.' },
+  { q: '2. What is the ratio of escape speed v_esc to circular orbital speed v_c at the same radius r?', o: ['1.0', '√2 ≈ 1.414', '2.0', '0.5'], a: 1, e: 'v_c = √(GM/r) and v_esc = √(2GM/r), so v_esc / v_c = √2.' },
+  { q: '3. If a test particle has positive specific mechanical energy (ε = v²/2 − GM/r > 0), its trajectory is:', o: ['A circle', 'A bound ellipse', 'An unbound hyperbola', 'A spiral into the star'], a: 2, e: 'ε > 0 corresponds to an unbound hyperbolic flyby with eccentricity e > 1.' },
+  { q: '4. At what radius does the Photon Sphere of a non-rotating Schwarzschild black hole lie?', o: ['r = r_s', 'r = 1.5 r_s = 3GM/c²', 'r = 3.0 r_s = 6GM/c²', 'r = 0'], a: 1, e: 'Null circular geodesics occur at r = 3GM/c² = 1.5 r_s.' },
+  { q: '5. Is the singularity at r = r_s in Schwarzschild coordinates a physical divergence of spacetime curvature?', o: ['Yes, curvature is infinite at r = r_s', 'No, it is a coordinate singularity; the Kretschmann scalar K = 48G²M²/(c⁴r⁶) is finite at r = r_s', 'Only for planets', 'It is a solid wall'], a: 1, e: 'r = r_s is a coordinate singularity; physical curvature diverges at the central singularity r = 0.' },
+  { q: '6. Does a rubber sheet stretched by a heavy ball in Earth\'s gravity literally represent 4D spacetime curvature?', o: ['Yes, it is exact', 'No, it is only a visual analogy and cannot directly represent gravitational time dilation (g_tt)', 'It only works for black holes', 'It proves spacetime is 2D'], a: 1, e: 'The rubber sheet relies on external gravity and misses the crucial time-dilation component of the metric.' }
+];
+
+function renderExperimentsTabHTML() {
+  if (state.expSubTab === 'nbody') {
+    return `
+      <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:8px;">
+        Newtonian N-Body Velocity-Verlet Integrator ($\mathbf{a}_i = \sum G m_j (\mathbf{r}_j - \mathbf{r}_i)/|\mathbf{r}_j - \mathbf{r}_i|^3$).
+      </p>
+      <button class="btn-sm" style="width:100%; margin-bottom:6px;" onclick="addRandomNBody()">+ Add New Orbiting Body</button>
+      <button class="btn-sm" style="width:100%; margin-bottom:6px;" onclick="initDefaultNBody()">↺ Reset 3-Body System</button>
+    `;
+  } else if (state.expSubTab === 'guided') {
+    const l = LESSONS[state.guidedIdx];
+    return `
+      <div class="info-card">
+        <h4>${l.t}</h4>
+        <p>${l.b}</p>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <button class="btn-sm" onclick="state.guidedIdx=(state.guidedIdx+LESSONS.length-1)%LESSONS.length; buildRightPanel()">◀ Prev</button>
+        <button class="btn-sm" onclick="state.guidedIdx=(state.guidedIdx+1)%LESSONS.length; buildRightPanel()">Next ▶</button>
+      </div>
+    `;
+  } else {
+    const q = QUIZZES[state.quizIdx];
+    return `
+      <div class="info-card">
+        <p style="font-weight:700; margin-bottom:6px;">${q.q}</p>
+        ${q.o.map((opt, i) => `
+          <button class="btn-sm" style="width:100%; text-align:left; margin-bottom:4px;" onclick="alert('${i === q.a ? '✓ Correct! ' : '✗ Incorrect. '}' + '${q.e.replace(/'/g, "\\'")}')">${opt}</button>
+        `).join('')}
+      </div>
+      <button class="btn-sm" style="width:100%;" onclick="state.quizIdx=(state.quizIdx+1)%QUIZZES.length; buildRightPanel()">Next Challenge ▶</button>
+    `;
+  }
+}
+
+function addRandomNBody() {
+  const r = 4 + Math.random() * 6;
+  const ang = Math.random() * 2 * Math.PI;
+  const v = Math.sqrt(8.0 / r);
+  state.nBodies.push({
+    name: `Body ${state.nBodies.length + 1}`,
+    m: 0.05,
+    x: r * Math.cos(ang),
+    z: r * Math.sin(ang),
+    vx: -v * Math.sin(ang),
+    vz: v * Math.cos(ang),
+    color: 0xa855f7,
+    trail: []
+  });
+}
+
+/* ============================================================================
+   15. BOTTOM TELEMETRY, MODEL ASSUMPTIONS & LIVE GRAPH ENGINE
+   ============================================================================ */
+function updateBottomTelemetryAndGraph() {
+  const leftBox = document.getElementById('bottom-left-telemetry');
+  const rightBox = document.getElementById('bottom-right-model-info');
+  const mod = state.module;
+
+  if (mod === 'solar') {
+    const item = planetMeshMap[state.selectedBodyId] || planetMeshMap['earth'];
+    const st = item.currentState || { r_AU: 1, speed_kms: 29.8 };
+    state.graphHistory.push({ v1: st.r_AU, v2: st.speed_kms / 20 });
+    leftBox.innerHTML = `
+      <div style="color:var(--accent); font-weight:700;">SOLAR TELEMETRY (${item.body.name})</div>
+      <div class="tel-row"><span>Elapsed Time:</span><span class="v">${state.simTimeDays.toFixed(1)} days</span></div>
+      <div class="tel-row"><span>Heliocentric r:</span><span class="v">${st.r_AU.toFixed(4)} AU</span></div>
+      <div class="tel-row"><span>Instantaneous v:</span><span class="v">${st.speed_kms.toFixed(2)} km/s</span></div>
+      <div class="tel-row"><span>Scale Mode:</span><span class="v">${state.scaleViewMode}</span></div>
+    `;
+    rightBox.innerHTML = `
+      <div style="color:var(--newt-col); font-weight:700;">MODEL ASSUMPTIONS &amp; UNITS</div>
+      <div style="font-size:10.5px; color:var(--text-muted); line-height:1.4;">
+        <strong>Model:</strong> Exact two-body Keplerian equation solver ($M = E - e\sin E$) with NASA/IAU J2000 orbital elements.<br>
+        <strong>Units:</strong> Distances in AU, speeds in km/s.
+      </div>
+    `;
+  } else if (mod === 'orbital') {
+    const p = state.orbParticle;
+    const r = Math.hypot(p.x, p.z);
+    const vSq = p.vx * p.vx + p.vz * p.vz;
+    const eps = 0.5 * vSq - state.orbCentralMassSolar / r;
+    const h = Math.abs(p.x * p.vz - p.z * p.vx);
+    state.graphHistory.push({ v1: r, v2: Math.sqrt(vSq) });
+    leftBox.innerHTML = `
+      <div style="color:var(--accent); font-weight:700;">ORBITAL MECHANICS TELEMETRY</div>
+      <div class="tel-row"><span>Radius r:</span><span class="v">${r.toFixed(3)} AU</span></div>
+      <div class="tel-row"><span>Speed v:</span><span class="v">${(Math.sqrt(vSq)*29.78).toFixed(2)} km/s</span></div>
+      <div class="tel-row"><span>Specific Energy ε:</span><span class="v">${eps.toFixed(3)} (${eps < -0.01 ? 'Bound' : (eps > 0.01 ? 'Unbound' : 'Parabolic')})</span></div>
+      <div class="tel-row"><span>Ang. Momentum h:</span><span class="v">${h.toFixed(3)} AU²/yr</span></div>
+    `;
+    rightBox.innerHTML = `
+      <div style="color:var(--newt-col); font-weight:700;">MODEL VALIDATION</div>
+      <div style="font-size:10.5px; color:var(--text-muted); line-height:1.4;">
+        <strong>Integrator:</strong> Symplectic Velocity-Verlet conserving specific mechanical energy $\varepsilon$ and angular momentum $h$.
+      </div>
+    `;
+  } else {
+    const g = state.grGeodesic;
+    state.graphHistory.push({ v1: g.r / 4, v2: (g.t_coord - g.tau) * 0.1 });
+    leftBox.innerHTML = `
+      <div style="color:var(--gr-col); font-weight:700;">RELATIVISTIC TELEMETRY</div>
+      <div class="tel-row"><span>Radial Coord r:</span><span class="v">${g.r.toFixed(3)} rₛ</span></div>
+      <div class="tel-row"><span>Proper Time τ:</span><span class="v">${g.tau.toFixed(2)} M</span></div>
+      <div class="tel-row"><span>Coord Time t:</span><span class="v">${g.t_coord.toFixed(2)} M</span></div>
+      <div class="tel-row"><span>Horizon rₛ:</span><span class="v">1.000 rₛ (2GM/c²)</span></div>
+    `;
+    rightBox.innerHTML = `
+      <div style="color:var(--gr-col); font-weight:700;">SCHWARZSCHILD METRIC MODEL</div>
+      <div style="font-size:10.5px; color:var(--text-muted); line-height:1.4;">
+        <strong>Assumptions:</strong> Exterior vacuum spacetime of a static, spherically symmetric, uncharged mass ($J=0, Q=0$).
+      </div>
+    `;
+  }
+
+  if (state.graphHistory.length > 220) state.graphHistory.shift();
+
+  // Render Live Synchronized Plot
+  const canvas = document.getElementById('live-graph-canvas');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#04070d';
+  ctx.fillRect(0, 0, w, h);
+
+  const drawCurve = (key, col, scaleY) => {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    state.graphHistory.forEach((pt, idx) => {
+      const sx = (idx / 220) * w;
+      const sy = h - 18 - pt[key] * scaleY;
+      if (idx === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    });
+    ctx.stroke();
+  };
+  drawCurve('v1', '#00d2ff', 28);
+  drawCurve('v2', '#10b981', 28);
+  ctx.font = 'bold 10.5px JetBrains Mono, monospace';
+  ctx.fillStyle = '#00d2ff'; ctx.fillText('─── Radial Distance r(t)', 10, 15);
+  ctx.fillStyle = '#10b981'; ctx.fillText('─── Orbital Speed / Time Shift', 195, 15);
+  ctx.restore();
+}
+
+/* ============================================================================
+   16. TOOLBAR, CAMERA PRESETS, CSV EXPORT & ANIMATION LOOP
+   ============================================================================ */
+function selectSolarBody(id) {
+  state.selectedBodyId = id;
+  buildLeftPanel();
+}
+
+function setScaleMode(mode) {
+  state.scaleViewMode = mode;
+  initSolarSystem3D();
+  buildRightPanel();
+  document.getElementById('scale-alert-pill').textContent = mode === 'educational'
+    ? '⚠️ Educational View Active: Planet radii exaggerated & distances compressed (√AU scale) for visibility.'
+    : '✓ Scale-Aware Linear Distance View Active (1 AU = 8.0 units).';
+}
+
+function syncLayers() {
+  updateSolarSystemFrame(0);
+}
+
+function togglePlay() {
+  state.running = !state.running;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = state.running ? '⏸ Pause' : '▶ Play';
+  btn.classList.toggle('active-toggle', state.running);
+}
+
+function stepSimulation(dir) {
+  state.running = false;
+  document.getElementById('btn-play').textContent = '▶ Play';
+  document.getElementById('btn-play').classList.remove('active-toggle');
+  state.simTimeDays += dir * 5;
+  updateSolarSystemFrame(0);
+}
+
+function setCameraPreset(preset) {
+  state.followBody = (preset === 'follow');
+  if (preset === 'overview') {
+    controls.target.set(0, 0, 0);
+    camera.position.set(0, 28, 45);
+  } else if (preset === 'ecliptic_top') {
+    controls.target.set(0, 0, 0);
+    camera.position.set(0, 60, 0.01);
+  } else if (preset === 'edge_on') {
+    controls.target.set(0, 0, 0);
+    camera.position.set(0, 0.5, 50);
+  }
+  controls.update();
+}
+
+function togglePhysicsDepthMode() {
+  state.higherPhysicsMode = !state.higherPhysicsMode;
+  document.getElementById('btn-phys-level').textContent = state.higherPhysicsMode
+    ? 'Level: Higher Physics Mode (Equations & SI)'
+    : 'Level: Intuitive Visual Mode';
+  buildRightPanel();
+}
+
+function toggleUnitSystem() {
+  state.geometrizedUnits = !state.geometrizedUnits;
+  document.getElementById('btn-unit-sys').textContent = state.geometrizedUnits
+    ? 'Units: Geometrized (G = c = 1)'
+    : 'Units: SI (m, kg, s)';
+  buildRightPanel();
+}
+
+function exportGraphCSV() {
+  const rows = ['step,radius_or_v1,speed_or_v2', ...state.graphHistory.map((p, i) => `${i},${p.v1.toFixed(5)},${p.v2.toFixed(5)}`)];
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `spacetime-lab-${state.module}-data.csv`;
+  a.click();
+}
+
+function onCanvasClick(e) {
+  if (state.module !== 'solar') return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(clickableObjects, false);
+  if (hits.length > 0 && hits[0].object.userData.bodyId) {
+    selectSolarBody(hits[0].object.userData.bodyId);
+  }
+}
+
+function onWindowResize() {
+  const container = document.getElementById('canvas-container');
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+}
+
+/* Drawer Toggles */
+let lOpen = true, rOpen = true, bOpen = true;
+function toggleLeftDrawer(force) {
+  lOpen = typeof force === 'boolean' ? force : !lOpen;
+  document.getElementById('left-drawer').classList.toggle('closed', !lOpen);
+  document.getElementById('tab-left').classList.toggle('closed', !lOpen);
+  document.getElementById('tab-left').textContent = lOpen ? '◀ OBJECTS' : '▶ OBJECTS';
+  document.getElementById('btn-left-drawer').classList.toggle('active-toggle', lOpen);
+  document.getElementById('bottom-drawer').classList.toggle('expand-left', !lOpen);
+}
+function toggleRightDrawer(force) {
+  rOpen = typeof force === 'boolean' ? force : !rOpen;
+  document.getElementById('right-drawer').classList.toggle('closed', !rOpen);
+  document.getElementById('tab-right').classList.toggle('closed', !rOpen);
+  document.getElementById('tab-right').textContent = rOpen ? 'PHYSICS & MATH ▶' : '◀ PHYSICS & MATH';
+  document.getElementById('btn-right-drawer').classList.toggle('active-toggle', rOpen);
+  document.getElementById('bottom-drawer').classList.toggle('expand-right', !rOpen);
+}
+function toggleBottomDrawer(force) {
+  bOpen = typeof force === 'boolean' ? force : !bOpen;
+  document.getElementById('bottom-drawer').classList.toggle('closed', !bOpen);
+  document.getElementById('tab-bottom').classList.toggle('closed', !bOpen);
+  document.getElementById('tab-bottom').textContent = bOpen ? '▼ TIMELINE & LIVE GRAPHS' : '▲ TIMELINE & LIVE GRAPHS';
+  document.getElementById('btn-bottom-drawer').classList.toggle('active-toggle', bOpen);
+}
+function toggleCleanSpaceView() {
+  const clean = !lOpen && !rOpen && !bOpen;
+  toggleLeftDrawer(clean);
+  toggleRightDrawer(clean);
+  toggleBottomDrawer(clean);
+  document.getElementById('btn-clean-view').classList.toggle('active-toggle', !clean);
+}
+
+let lastT = performance.now();
+function animateLoop(now = performance.now()) {
+  requestAnimationFrame(animateLoop);
+  const dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+
+  if (state.module === 'solar') updateSolarSystemFrame(dt);
+  else if (state.module === 'orbital') updateOrbitalLabFrame(dt);
+  else if (state.module === 'gr' || state.module === 'blackhole') updateGRAndBlackHoleFrame(dt);
+  else if (state.module === 'timedilation') updateTimeDilationFrame(dt);
+  else if (state.module === 'experiments') updateNBodyFrame(dt);
+
+  updateBottomTelemetryAndGraph();
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  initThreeJS();
+  selectModule('solar');
+  animateLoop();
+});
+</script>
+</body>
+</html>
