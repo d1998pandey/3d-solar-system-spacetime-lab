@@ -25,7 +25,6 @@
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
-  /* Bright Day / Classroom Mode Theme Variables */
   body.day-mode {
     --bg-dark: #eef4fb;
     --panel-bg: rgba(255, 255, 255, 0.95);
@@ -55,7 +54,6 @@
     transition: background 0.25s, color 0.25s;
   }
 
-  /* Header & 10-Module Navigation */
   header {
     background: var(--header-bg);
     border-bottom: 1px solid var(--panel-border);
@@ -137,7 +135,6 @@
     border: none;
   }
 
-  /* Main Full-Screen Workspace */
   .app-body {
     flex: 1;
     position: relative;
@@ -153,7 +150,6 @@
     z-index: 1;
   }
 
-  /* Left, Right & Bottom Slide-Out Drawers */
   .left-drawer {
     position: absolute;
     top: 0;
@@ -213,7 +209,6 @@
   .left-drawer::-webkit-scrollbar-thumb,
   .right-drawer::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
 
-  /* Drawer Handle Tabs */
   .drawer-tab-left {
     position: absolute;
     top: 45%;
@@ -295,7 +290,6 @@
     align-items: center;
   }
 
-  /* Sliders & Controls */
   .slider-row {
     display: flex;
     flex-direction: column;
@@ -345,7 +339,6 @@
     color: var(--text-main);
   }
 
-  /* Celestial Object Grid & Info Cards */
   .planet-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -420,7 +413,6 @@
     font-weight: 600;
   }
 
-  /* Top Floating Camera & Scale Banner */
   .top-floating-bar {
     position: absolute;
     top: 10px;
@@ -454,7 +446,6 @@
     pointer-events: none;
   }
 
-  /* Bottom Panel Content */
   .bottom-content {
     flex: 1;
     display: grid;
@@ -496,19 +487,18 @@
   <div class="header-top">
     <div class="brand">
       <span>3D SOLAR SYSTEM &amp; SPACETIME CURVATURE LAB</span>
-      <span class="sub">Realistic Planet Textures, Individual Zoom &amp; Day/Dark Modes</span>
+      <span class="sub">Realistic Sun &amp; Planets, Kepler Orbits, Schwarzschild Geodesics &amp; GR</span>
     </div>
     <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
-      <button class="btn-sm theme-btn" id="btn-theme-mode" onclick="toggleDayNightMode()">☀️ Switch to Day Mode</button>
+      <button class="btn-sm theme-btn" id="btn-theme-mode" onclick="toggleDayNightMode()">☀️ Day / Light Mode</button>
       <button class="btn-sm" id="btn-unit-sys" onclick="toggleUnitSystem()">Units: SI (m, kg, s)</button>
-      <button class="btn-sm active-toggle" id="btn-left-drawer" onclick="toggleLeftDrawer()">◧ Objects &amp; Zoom</button>
-      <button class="btn-sm active-toggle" id="btn-right-drawer" onclick="toggleRightDrawer()">◨ Physics &amp; Math</button>
-      <button class="btn-sm active-toggle" id="btn-bottom-drawer" onclick="toggleBottomDrawer()">◫ Graphs &amp; Time</button>
+      <button class="btn-sm active-toggle" id="btn-left-drawer" onclick="toggleLeftDrawer()">◧ Objects</button>
+      <button class="btn-sm active-toggle" id="btn-right-drawer" onclick="toggleRightDrawer()">◨ Physics</button>
+      <button class="btn-sm active-toggle" id="btn-bottom-drawer" onclick="toggleBottomDrawer()">◫ Graphs</button>
       <button class="btn-sm" id="btn-clean-view" onclick="toggleCleanSpaceView()">👁 Clean 3D Space</button>
     </div>
   </div>
 
-  <!-- 10 Core Modules Navigation Bar -->
   <div class="module-bar">
     <button class="mod-btn active" id="mod-solar" onclick="selectModule('solar')">1. Solar System Explorer</button>
     <button class="mod-btn" id="mod-newton" onclick="selectModule('newton')">2. Newtonian Gravity &amp; Field Lab</button>
@@ -524,13 +514,12 @@
 </header>
 
 <div class="app-body">
-  <!-- LEFT DRAWER: OBJECT SELECTION, INDIVIDUAL PLANET ZOOM & LAYERS -->
+  <!-- LEFT DRAWER -->
   <aside class="left-drawer" id="left-drawer">
     <div id="dynamic-left-panel"></div>
 
-    <!-- Universal Visualization Layers & Scale Controls -->
     <div class="panel-sec" style="border-bottom:none;">
-      <div class="sec-title"><span>Visualization Layers &amp; Scaling</span></div>
+      <div class="sec-title"><span>Visualization Layers</span></div>
       <div class="chk-grid">
         <label class="chk-lbl"><input type="checkbox" id="chk-orbits" checked onchange="syncLayers()"> Orbital Paths</label>
         <label class="chk-lbl"><input type="checkbox" id="chk-vel-vec" checked onchange="syncLayers()"> Velocity Vec (v)</label>
@@ -547,34 +536,33 @@
   <!-- CENTER 3D SPACE VIEWPORT -->
   <main id="canvas-container"></main>
 
-  <!-- TOP FLOATING CAMERA & INDIVIDUAL ZOOM BAR -->
+  <!-- TOP FLOATING BAR -->
   <div class="top-floating-bar">
     <button class="btn-sm active-toggle" id="btn-play" onclick="togglePlay()">⏸ Pause</button>
     <button class="btn-sm" onclick="stepSimulation(-1)">◀ −Δt</button>
     <button class="btn-sm" onclick="stepSimulation(1)">+Δt ▶</button>
     <span style="color:#64748b;">|</span>
-    <button class="btn-sm active-toggle" id="btn-zoom-planet" onclick="zoomToSelectedPlanet()" style="border-color:var(--newt-col); color:var(--newt-col);">🔍 Zoom &amp; Lock Selected Planet</button>
+    <button class="btn-sm active-toggle" onclick="zoomToSelectedPlanet()">🔍 Zoom to Selected Planet</button>
     <button class="btn-sm" onclick="setCameraPreset('overview')">Solar Overview</button>
     <button class="btn-sm" onclick="setCameraPreset('ecliptic_top')">Top View</button>
     <button class="btn-sm" onclick="setCameraPreset('edge_on')">Edge-On</button>
     <button class="btn-sm" onclick="exportGraphCSV()">⬇ CSV</button>
   </div>
 
-  <!-- SCALE DISCLOSURE BANNER -->
   <div class="scale-alert-pill" id="scale-alert-pill">
     🔍 Click any planet on the left (or in 3D) to Zoom In close-up! Click "Solar Overview" to zoom back out.
   </div>
 
   <div class="drawer-tab-right" id="tab-right" onclick="toggleRightDrawer()">PHYSICS &amp; MATH ▶</div>
 
-  <!-- RIGHT DRAWER: PARAMETERS, EQUATIONS, MODEL ASSUMPTIONS & TELEMETRY -->
+  <!-- RIGHT DRAWER -->
   <aside class="right-drawer" id="right-drawer">
     <div id="dynamic-right-panel"></div>
   </aside>
 
   <div class="drawer-tab-bottom" id="tab-bottom" onclick="toggleBottomDrawer()">▼ TIMELINE &amp; LIVE GRAPHS</div>
 
-  <!-- BOTTOM DRAWER: TIMELINE, GRAPH & MODEL VALIDATION -->
+  <!-- BOTTOM DRAWER -->
   <section class="bottom-drawer" id="bottom-drawer">
     <div class="bottom-content">
       <div class="telemetry-box" id="bottom-left-telemetry"></div>
@@ -587,8 +575,6 @@
 <script>
 /* ============================================================================
    1. ASTRONOMICAL CONSTANTS & WELL-SPACED CELESTIAL DATASET
-   We provide well-spaced visual orbital radii (sceneRadius) so inner planets
-   (Mercury, Venus, Earth, Mars) never crowd into the glowing Sun!
    ============================================================================ */
 const CONST = {
   G: 6.67430e-11,
@@ -614,7 +600,7 @@ const SOLAR_BODIES = [
 ];
 
 /* ============================================================================
-   2. PROCEDURAL PLANET & FIRE SUN TEXTURE GENERATOR (REALISTIC 3D LOOK)
+   2. PROCEDURAL PLANET & FIRE SUN TEXTURE GENERATOR
    ============================================================================ */
 function generatePlanetTexture(id) {
   const canvas = document.createElement('canvas');
@@ -623,7 +609,6 @@ function generatePlanetTexture(id) {
   const ctx = canvas.getContext('2d');
 
   if (id === 'sun') {
-    // Fiery solar plasma granulation
     const grad = ctx.createLinearGradient(0, 0, 512, 256);
     grad.addColorStop(0, '#ff4500');
     grad.addColorStop(0.5, '#ff9900');
@@ -638,7 +623,6 @@ function generatePlanetTexture(id) {
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     }
   } else if (id === 'earth') {
-    // Deep blue oceans + green/brown continents + white polar ice caps + clouds
     ctx.fillStyle = '#0c4a6e';
     ctx.fillRect(0, 0, 512, 256);
     ctx.fillStyle = '#15803d';
@@ -651,24 +635,20 @@ function generatePlanetTexture(id) {
     for (let i = 0; i < 20; i++) {
       ctx.beginPath(); ctx.arc(Math.random() * 512, 50 + Math.random() * 150, 12 + Math.random() * 18, 0, Math.PI * 2); ctx.fill();
     }
-    // Polar ice caps
     ctx.fillStyle = '#f8fafc';
     ctx.fillRect(0, 0, 512, 18);
     ctx.fillRect(0, 238, 512, 18);
-    // Wispy clouds
     ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
     for (let i = 0; i < 60; i++) {
       ctx.fillRect(Math.random() * 512, Math.random() * 256, 30 + Math.random() * 60, 4 + Math.random() * 6);
     }
   } else if (id === 'jupiter') {
-    // Zonal atmospheric bands + Great Red Spot
     const bands = ['#d97706', '#fef3c7', '#b45309', '#fde68a', '#92400e', '#fed7aa', '#c2410c', '#fef3c7', '#b45309'];
     const bh = 256 / bands.length;
     bands.forEach((col, idx) => {
       ctx.fillStyle = col;
       ctx.fillRect(0, idx * bh, 512, bh + 2);
     });
-    // Great Red Spot
     ctx.fillStyle = '#dc2626';
     ctx.beginPath(); ctx.ellipse(320, 165, 34, 18, 0, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#fef3c7'; ctx.lineWidth = 3; ctx.stroke();
@@ -704,7 +684,6 @@ function generatePlanetTexture(id) {
       ctx.fillRect(0, Math.random() * 256, 512, 4 + Math.random() * 10);
     }
   } else {
-    // Cratered rocky surface for Mercury, Moon, Pluto
     ctx.fillStyle = id === 'pluto' ? '#a8a29e' : '#64748b';
     ctx.fillRect(0, 0, 512, 256);
     for (let i = 0; i < 180; i++) {
@@ -721,7 +700,6 @@ function generatePlanetTexture(id) {
   return tex;
 }
 
-// Create Glowing Fire Corona Sprite for the Sun
 function createSunGlowSprite() {
   const canvas = document.createElement('canvas');
   canvas.width = 256;
@@ -742,16 +720,16 @@ function createSunGlowSprite() {
 }
 
 /* ============================================================================
-   3. GLOBAL STATE FOR ALL 10 MODULES + DAY/DARK MODE
+   3. GLOBAL STATE
    ============================================================================ */
 const state = {
   module: 'solar',
-  dayMode: false,            // False = Dark Space Mode; True = Day / Classroom Bright Mode
+  dayMode: false,
   geometrizedUnits: false,
   running: true,
   simDaysPerSec: 35,
   simTimeDays: 0,
-  lockedPlanetId: null,      // When set, camera tracks & zooms closely to this planet!
+  lockedPlanetId: null,
 
   selectedBodyId: 'earth',
   scaleViewMode: 'educational',
@@ -844,7 +822,7 @@ function initThreeJS() {
   camera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 3000);
   camera.position.set(0, 42, 72);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.appendChild(renderer.domElement);
@@ -852,10 +830,10 @@ function initThreeJS() {
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.minDistance = 0.8; // Allows very close-up inspection of individual planets!
+  controls.minDistance = 0.8;
   controls.maxDistance = 600;
 
-  ambientLight = new THREE.AmbientLight(0xffffff, 0.62);
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
   scene.add(ambientLight);
   sunPointLight = new THREE.PointLight(0xfff4d6, 1.8, 1200);
   scene.add(sunPointLight);
@@ -863,7 +841,6 @@ function initThreeJS() {
   dirLight.position.set(30, 50, 40);
   scene.add(dirLight);
 
-  // Background Starfield
   const starVerts = [];
   for (let i = 0; i < 1500; i++) {
     const r = 450 + Math.random() * 350;
@@ -904,13 +881,12 @@ function toggleDayNightMode() {
   state.dayMode = !state.dayMode;
   document.body.classList.toggle('day-mode', state.dayMode);
   const btn = document.getElementById('btn-theme-mode');
-  btn.textContent = state.dayMode ? '🌙 Switch to Dark Space Mode' : '☀️ Switch to Day Mode';
+  btn.textContent = state.dayMode ? '🌙 Dark Space Mode' : '☀️ Day / Light Mode';
 
   scene.background = new THREE.Color(state.dayMode ? 0xe8f1fa : 0x04070e);
   starFieldPoints.visible = !state.dayMode;
-  ambientLight.intensity = state.dayMode ? 0.95 : 0.62;
+  ambientLight.intensity = state.dayMode ? 0.95 : 0.65;
 
-  // Rebuild active module so grid & black hole contrast adapt to Day/Night mode
   initSolarSystem3D();
   selectModule(state.module);
 }
@@ -1006,7 +982,6 @@ function initSolarSystem3D() {
     solarGroup.add(mesh);
     clickableObjects.push(mesh);
 
-    // Add Fiery Multi-Layer Corona Glow to the Sun
     if (body.id === 'sun') {
       const coronaSprite = createSunGlowSprite();
       mesh.add(coronaSprite);
@@ -1017,7 +992,6 @@ function initSolarSystem3D() {
       mesh.add(innerHalo);
     }
 
-    // Add Atmospheric Halo to Earth
     if (body.id === 'earth') {
       const atmo = new THREE.Mesh(
         new THREE.SphereGeometry(rad * 1.08, 28, 24),
@@ -1026,7 +1000,6 @@ function initSolarSystem3D() {
       mesh.add(atmo);
     }
 
-    // Add Multi-Band Rings to Saturn & Uranus
     if (body.hasRings) {
       const innerR = rad * 1.35;
       const outerR = body.id === 'saturn' ? rad * 2.35 : rad * 1.75;
@@ -1045,7 +1018,6 @@ function initSolarSystem3D() {
     const lbl = makeTextSprite(body.name, lblCol, 0.85);
     solarGroup.add(lbl);
 
-    // Well-spaced Keplerian Orbit Curve
     let orbitLine = null;
     if (body.a_AU > 0 && !body.parent) {
       const pts = [];
@@ -1069,10 +1041,9 @@ function initSolarSystem3D() {
     const aArrow = new THREE.ArrowHelper(new THREE.Vector3(-1, 0, 0), new THREE.Vector3(), rad + 1.5, 0xf43f5e, 0.4, 0.22);
     solarGroup.add(vArrow, aArrow);
 
-    planetMeshMap[body.id] = { body, mesh, lbl, orbitLine, vArrow, aArrow, prevTargetPos: new THREE.Vector3() };
+    planetMeshMap[body.id] = { body, mesh, lbl, orbitLine, vArrow, aArrow };
   });
 
-  // Well-spaced Asteroid Belt between Mars (24.5) and Jupiter (36.0)
   const astVerts = [];
   for (let i = 0; i < 1000; i++) {
     const r = (28.5 + Math.random() * 4.5) * state.orbitSpacingFactor;
@@ -1111,7 +1082,6 @@ function updateSolarSystemFrame(dt) {
     item.lbl.visible = visibleBody && showLabels;
     if (item.orbitLine) item.orbitLine.visible = visibleBody && showOrbits;
 
-    // Axial rotation of the Sun and planets
     item.mesh.rotation.y += (body.id === 'sun' ? 0.4 : 1.2) * dt;
 
     const pos = solveKeplerPosition(body, state.simTimeDays);
@@ -1120,7 +1090,6 @@ function updateSolarSystemFrame(dt) {
     item.lbl.position.set(pos.x, pos.y + getScenePlanetRadius(body) + 1.0, pos.z);
     item.currentState = pos;
 
-    // If camera is locked & zoomed onto this planet, translate camera along with the planet!
     if (state.lockedPlanetId === body.id) {
       const delta = item.mesh.position.clone().sub(oldPos);
       camera.position.add(delta);
@@ -1141,7 +1110,6 @@ function updateSolarSystemFrame(dt) {
   });
 }
 
-// Smoothly Zoom Camera to Individual Planet Close-Up
 function zoomToPlanetById(id) {
   state.selectedBodyId = id;
   state.lockedPlanetId = id;
@@ -1344,13 +1312,11 @@ function updateOrbitalLabFrame(dt) {
    ============================================================================ */
 function makeHighContrastBlackHole(radius) {
   const grp = new THREE.Group();
-  // Pure pitch-black Event Horizon sphere
   const eh = new THREE.Mesh(new THREE.SphereGeometry(radius, 36, 28), new THREE.MeshBasicMaterial({ color: 0x000000 }));
   grp.add(eh);
-  // Glowing relativistic Einstein/photon boundary halo so the Black Hole is 100% visible in both Dark and Day modes!
   const rim = new THREE.Mesh(
-    new THREE.SphereGeometry(radius * 1.07, 36, 28),
-    new THREE.MeshBasicMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.55, side: THREE.BackSide })
+    new THREE.SphereGeometry(radius * 1.08, 36, 28),
+    new THREE.MeshBasicMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.6, side: THREE.BackSide })
   );
   grp.add(rim);
   return grp;
@@ -1732,7 +1698,7 @@ function buildLeftPanel() {
       <div class="panel-sec">
         <div class="sec-title">
           <span>Click Planet to Zoom &amp; Inspect</span>
-          <span style="color:var(--newt-col); font-size:10px;">Auto-Zoom Enabled</span>
+          <span style="color:var(--newt-col); font-size:10px;">Auto-Zoom Active</span>
         </div>
         <div class="planet-grid">
           ${SOLAR_BODIES.map(b => `
@@ -1765,7 +1731,7 @@ function buildLeftPanel() {
         <div class="info-card">
           <h4>Module: ${mod.toUpperCase()}</h4>
           <p style="color:var(--text-muted); margin-bottom:6px;">
-            Use the Right Drawer to adjust physical parameters. If any dark object (like the Black Hole or Spacetime Grid) is hard to see on your screen, click <strong>"☀️ Switch to Day Mode"</strong> in the top bar!
+            Use the Right Drawer to adjust physical parameters. If any dark object (like the Black Hole or Spacetime Grid) is hard to see on your screen, click <strong>"☀️ Day / Light Mode"</strong> in the top bar!
           </p>
         </div>
       </div>
@@ -2001,7 +1967,7 @@ function buildRightPanel() {
 
 const LESSONS = [
   { t: '1. Why Do Planets Orbit the Sun?', b: 'A planet has tangential inertia while the Sun pulls it inward with gravity F = GMm/r², continually curving its path into a closed conic section.' },
-  { t: '2. Why Does a Planet Speed Up Near Perihelion?', b: 'Conservation of angular momentum h = |r × v| requires orbital speed v to increase when radial distance r decreases (Kepler\'s 2nd Law).' },
+  { t: '2. Why Does a Planet Speed Up Near Perihelion?', b: 'Conservation of angular momentum h = |r × v| requires orbital speed v to increase when radial distance r decreases (Kepler 2nd Law).' },
   { t: '3. Inverse-Square Law of Gravity', b: 'Doubling the separation distance r reduces gravitational attraction by a factor of 2² = 4.' },
   { t: '4. Orbital Escape Velocity', b: 'When kinetic energy v²/2 equals gravitational potential magnitude GM/r (total specific energy ε = 0), the body escapes on a parabolic trajectory at v_esc = √(2GM/r).' },
   { t: '5. How Mass Affects Spacetime', b: 'In General Relativity, mass-energy curves 4-dimensional spacetime geometry; free-falling bodies follow spacetime geodesics.' },
@@ -2009,7 +1975,7 @@ const LESSONS = [
   { t: '7. Gravitational Time Dilation', b: 'A stationary clock deeper in a gravitational potential well ticks slower relative to a distant clock: dτ = dt √(1 − r_s/r).' },
   { t: '8. How Gravity Deflects Massless Light', b: 'Photons follow null geodesics (ds² = 0) through curved spacetime, bending by α ≈ 4GM/(bc²) near a mass M.' },
   { t: '9. Event Horizon vs. Photon Sphere vs. ISCO', b: 'For a Schwarzschild black hole: Event Horizon is at r_s = 2GM/c², unstable light orbits at 1.5 r_s, and innermost stable matter orbits at 3.0 r_s.' },
-  { t: '10. When Is General Relativity Necessary?', b: 'Whenever r approaches r_s (compact objects) or high precision is required (GPS satellite clocks, Mercury\'s perihelion advance).' }
+  { t: '10. When Is General Relativity Necessary?', b: 'Whenever r approaches r_s (compact objects) or high precision is required (GPS satellite clocks, Mercury perihelion advance).' }
 ];
 
 const QUIZZES = [
@@ -2018,8 +1984,18 @@ const QUIZZES = [
   { q: '3. If a test particle has positive specific mechanical energy (ε = v²/2 − GM/r > 0), its trajectory is:', o: ['A circle', 'A bound ellipse', 'An unbound hyperbola', 'A spiral into the star'], a: 2, e: 'ε > 0 corresponds to an unbound hyperbolic flyby with eccentricity e > 1.' },
   { q: '4. At what radius does the Photon Sphere of a non-rotating Schwarzschild black hole lie?', o: ['r = r_s', 'r = 1.5 r_s = 3GM/c²', 'r = 3.0 r_s = 6GM/c²', 'r = 0'], a: 1, e: 'Null circular geodesics occur at r = 3GM/c² = 1.5 r_s.' },
   { q: '5. Is the singularity at r = r_s in Schwarzschild coordinates a physical divergence of spacetime curvature?', o: ['Yes, curvature is infinite at r = r_s', 'No, it is a coordinate singularity; the Kretschmann scalar K = 48G²M²/(c⁴r⁶) is finite at r = r_s', 'Only for planets', 'It is a solid wall'], a: 1, e: 'r = r_s is a coordinate singularity; physical curvature diverges at the central singularity r = 0.' },
-  { q: '6. Does a rubber sheet stretched by a heavy ball in Earth\'s gravity literally represent 4D spacetime curvature?', o: ['Yes, it is exact', 'No, it is only a visual analogy and cannot directly represent gravitational time dilation (g_tt)', 'It only works for black holes', 'It proves spacetime is 2D'], a: 1, e: 'The rubber sheet relies on external gravity and misses the crucial time-dilation component of the metric.' }
+  { q: '6. Does a rubber sheet stretched by a heavy ball in Earth gravity literally represent 4D spacetime curvature?', o: ['Yes, it is exact', 'No, it is only a visual analogy and cannot directly represent gravitational time dilation (g_tt)', 'It only works for black holes', 'It proves spacetime is 2D'], a: 1, e: 'The rubber sheet relies on external gravity and misses the crucial time-dilation component of the metric.' }
 ];
+
+function checkQuizAnswer(choiceIdx) {
+  const q = QUIZZES[state.quizIdx];
+  const msg = (choiceIdx === q.a ? '✓ Correct! ' : '✗ Not quite. ') + q.e;
+  const fb = document.getElementById('quiz-feedback-box');
+  if (fb) {
+    fb.style.display = 'block';
+    fb.textContent = msg;
+  }
+}
 
 function renderExperimentsTabHTML() {
   if (state.expSubTab === 'nbody') {
@@ -2048,8 +2024,9 @@ function renderExperimentsTabHTML() {
       <div class="info-card">
         <p style="font-weight:700; margin-bottom:6px;">${q.q}</p>
         ${q.o.map((opt, i) => `
-          <button class="btn-sm" style="width:100%; text-align:left; margin-bottom:4px;" onclick="alert('${i === q.a ? '✓ Correct! ' : '✗ Incorrect. '}' + '${q.e.replace(/'/g, "\\'")}')">${opt}</button>
+          <button class="btn-sm" style="width:100%; text-align:left; margin-bottom:4px;" onclick="checkQuizAnswer(${i})">${opt}</button>
         `).join('')}
+        <div id="quiz-feedback-box" class="warn-banner" style="display:none; margin-top:6px;"></div>
       </div>
       <button class="btn-sm" style="width:100%;" onclick="state.quizIdx=(state.quizIdx+1)%QUIZZES.length; buildRightPanel()">Next Challenge ▶</button>
     `;
@@ -2094,7 +2071,7 @@ function updateBottomTelemetryAndGraph() {
     rightBox.innerHTML = `
       <div style="color:var(--newt-col); font-weight:700;">MODEL ASSUMPTIONS &amp; UNITS</div>
       <div style="font-size:10.5px; color:var(--text-muted); line-height:1.4;">
-        <strong>Model:</strong> Two-body Keplerian equation solver ($M = E - e\sin E$) with procedural planetary surface &amp; atmospheric textures.
+        <strong>Model:</strong> Two-body Keplerian equation solver (M = E − e sin E) with procedural planetary surface &amp; atmospheric textures.
       </div>
     `;
   } else if (mod === 'orbital') {
@@ -2114,7 +2091,7 @@ function updateBottomTelemetryAndGraph() {
     rightBox.innerHTML = `
       <div style="color:var(--newt-col); font-weight:700;">MODEL VALIDATION</div>
       <div style="font-size:10.5px; color:var(--text-muted); line-height:1.4;">
-        <strong>Integrator:</strong> Symplectic Velocity-Verlet conserving specific mechanical energy $\varepsilon$ and angular momentum $h$.
+        <strong>Integrator:</strong> Symplectic Velocity-Verlet conserving specific mechanical energy ε and angular momentum h.
       </div>
     `;
   } else {
@@ -2130,7 +2107,7 @@ function updateBottomTelemetryAndGraph() {
     rightBox.innerHTML = `
       <div style="color:var(--gr-col); font-weight:700;">SCHWARZSCHILD METRIC MODEL</div>
       <div style="font-size:10.5px; color:var(--text-muted); line-height:1.4;">
-        <strong>Assumptions:</strong> Exterior vacuum spacetime of a static, spherically symmetric, uncharged mass ($J=0, Q=0$).
+        <strong>Assumptions:</strong> Exterior vacuum spacetime of a static, spherically symmetric, uncharged mass (J=0, Q=0).
       </div>
     `;
   }
@@ -2251,7 +2228,6 @@ function onWindowResize() {
   renderer.setSize(container.clientWidth, container.clientHeight);
 }
 
-/* Drawer Toggles */
 let lOpen = true, rOpen = true, bOpen = true;
 function toggleLeftDrawer(force) {
   lOpen = typeof force === 'boolean' ? force : !lOpen;
